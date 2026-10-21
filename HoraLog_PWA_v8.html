@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HoraLog</title>
+    <meta name="theme-color" content="#1F497D">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="HoraLog">
+
+    <!-- Embedded High-Res Icons (SVG + PNG Fallback) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%231F497D'/><circle cx='256' cy='256' r='180' fill='none' stroke='white' stroke-width='32'/><polyline points='256,120 256,256 340,256' fill='none' stroke='%2327AE60' stroke-width='36' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%231F497D'/><circle cx='256' cy='256' r='180' fill='none' stroke='white' stroke-width='32'/><polyline points='256,120 256,256 340,256' fill='none' stroke='%2327AE60' stroke-width='36' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+
+    <style>
+        :root {
+            --primary: #1F497D;
+            --primary-light: #2C5E9E;
+            --accent: #27AE60;
+            --danger: #C0392B;
+            --warning: #D35400;
+            --bg: #F4F6F9;
+            --card-bg: #FFFFFF;
+            --text: #2C3E50;
+            --border: #D0D7DE;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding-bottom: 75px;
+        }
+
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 16px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stamp-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .btn-stamp {
+            border: none;
+            border-radius: 10px;
+            padding: 14px 8px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
+        }
+
+        .btn-stamp:active { transform: scale(0.97); }
+
+        .btn-start { background-color: #27AE60; }
+        .btn-pause-start { background-color: #E67E22; }
+        .btn-pause-end { background-color: #2980B9; }
+        .btn-end { background-color: #C0392B; }
+
+        .code-selector {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .code-btn {
+            flex: 1;
+            padding: 12px 6px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: #F8F9FA;
+            font-weight: bold;
+            color: var(--text);
+            cursor: pointer;
+            text-align: center;
+            font-size: 13px;
+            transition: all 0.15s ease;
+        }
+
+        .code-btn.active {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 2px 5px rgba(31,73,125,0.3);
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 5px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            background: white;
+        }
+
+        nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 60px;
+            background: white;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            color: #7F8C8D;
+            font-size: 11px;
+            text-decoration: none;
+            padding: 8px 0;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .hidden { display: none !important; }
+
+        .time-display {
+            font-size: 13px;
+            color: #555;
+            margin-top: 2px;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            text-align: center;
+            margin-top: 6px;
+        }
+
+        table.month-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        table.month-table th, table.month-table td {
+            border: 1px solid var(--border);
+            padding: 6px 4px;
+            text-align: center;
+        }
+
+        table.month-table th {
+            background: var(--primary);
+            color: white;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 11px;
+            color: #888;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>HoraLog — Arbeitszeiterfassung</header>
+
+    <div class="container">
+
+        <!-- TAB 1: STEMPELUHR -->
+        <div id="tab-today" class="tab-content">
+            <div class="card">
+                <div class="card-title">
+                    <span>Erfassung & Stempeluhr</span>
+                    <input type="date" id="selected-date" class="form-control" style="width: auto; font-size: 13px;" onchange="loadDateData()">
+                </div>
+
+                <div class="stamp-grid">
+                    <button type="button" class="btn-stamp btn-start" onclick="stamp('start')">
+                        <span>🟢 Beginn</span>
+                        <span class="time-display" id="time-start">--:--</span>
+                    </button>
+                    <button type="button" class="btn-stamp btn-pause-start" onclick="stamp('pauseStart')">
+                        <span>⏸️ Pause Start</span>
+                        <span class="time-display" id="time-pause-start">--:--</span>
+                    </button>
+                    <button type="button" class="btn-stamp btn-pause-end" onclick="stamp('pauseEnd')">
+                        <span>▶️ Pause Ende</span>
+                        <span class="time-display" id="time-pause-end">--:--</span>
+                    </button>
+                    <button type="button" class="btn-stamp btn-end" onclick="stamp('end')">
+                        <span>🔴 Ende</span>
+                        <span class="time-display" id="time-end">--:--</span>
+                    </button>
+                </div>
+
+                <button type="button" class="code-btn" style="width: 100%; background: #EBF5FB; color: var(--primary); margin-top: 6px;" onclick="toggleManualEdit()">
+                    ✏️ Zeiten manuell bearbeiten / nachtragen
+                </button>
+            </div>
+
+            <!-- MANUAL EDIT FORM -->
+            <div id="manual-edit-card" class="card hidden" style="border-left: 4px solid var(--primary);">
+                <div class="card-title">Nachträgliche Korrektur</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label>Arbeitsbeginn</label>
+                        <input type="time" id="edit-start" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Arbeitsende</label>
+                        <input type="time" id="edit-end" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Pause Start</label>
+                        <input type="time" id="edit-pause-start" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Pause Ende</label>
+                        <input type="time" id="edit-pause-end" class="form-control">
+                    </div>
+                </div>
+                <button type="button" class="action-btn btn-start" onclick="saveManualEdit()">
+                    💾 Korrektur Speichern
+                </button>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Tagesstatus & Kürzel</div>
+                <div class="code-selector">
+                    <button type="button" class="code-btn active" id="code-btn-norm" onclick="setCode('')">Normal</button>
+                    <button type="button" class="code-btn" id="code-btn-k" onclick="setCode('K')">Krank (K)</button>
+                    <button type="button" class="code-btn" id="code-btn-u" onclick="setCode('U')">Urlaub (U)</button>
+                    <button type="button" class="code-btn" id="code-btn-fx" onclick="setCode('FX')">Flexi (FX)</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Tagesbilanz</div>
+                <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px;">
+                    <span>Soll-Arbeitszeit:</span>
+                    <strong id="day-target">08:00 Std.</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px;">
+                    <span>Ist-Arbeitszeit:</span>
+                    <strong id="day-actual">00:00 Std.</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; color: var(--primary);">
+                    <span>Tages-Saldo:</span>
+                    <span id="day-balance">0.0 Std.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: MONATSÜBERSICHT -->
+        <div id="tab-month" class="tab-content hidden">
+            <div class="card">
+                <div class="card-title">
+                    <span>Monatsübersicht</span>
+                    <input type="month" id="month-picker" class="form-control" style="width: auto; font-size: 13px;" onchange="renderMonthTable()">
+                </div>
+
+                <div style="background: #F8F9FA; padding: 10px; border-radius: 8px; margin-bottom: 12px; font-size: 13px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span>Monatssumme IST:</span> <strong id="month-sum-actual">00:00 Std.</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span>Monatssumme SOLL:</span> <strong id="month-sum-target">00:00 Std.</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--primary);">
+                        <span>Monatssaldo:</span> <strong id="month-sum-balance">0.0 Std.</strong>
+                    </div>
+                </div>
+
+                <div style="max-height: 250px; overflow-y: auto;">
+                    <table class="month-table">
+                        <thead>
+                            <tr>
+                                <th>Datum</th>
+                                <th>Beginn</th>
+                                <th>Pause</th>
+                                <th>Ende</th>
+                                <th>Code</th>
+                                <th>Ist</th>
+                            </tr>
+                        </thead>
+                        <tbody id="month-table-body"></tbody>
+                    </table>
+                </div>
+
+                <button type="button" class="action-btn btn-start" style="margin-top: 14px;" onclick="exportPDF()">
+                    📧 Monatsbericht als PDF / E-Mail versenden
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB 3: VORGABEN & DATENSICHERUNG -->
+        <div id="tab-settings" class="tab-content hidden">
+            <div class="card">
+                <div class="card-title">Arbeitszeitmodell & Vorgaben</div>
+                <div class="form-group">
+                    <label>Arbeitstage pro Woche</label>
+                    <input type="number" id="cfg-days-week" class="form-control" value="5" min="1" max="7">
+                </div>
+                <div class="form-group">
+                    <label>Soll-Arbeitszeit pro Tag (hh:mm)</label>
+                    <input type="time" id="cfg-target-hours" class="form-control" value="08:00">
+                </div>
+                <div class="form-group">
+                    <label>Jahresurlaubsanspruch (Tage)</label>
+                    <input type="number" id="cfg-vacation-claim" class="form-control" value="30">
+                </div>
+                <div class="form-group">
+                    <label>Resturlaub aus Vorjahr (Tage)</label>
+                    <input type="number" id="cfg-vacation-prev" class="form-control" value="0">
+                </div>
+                <button type="button" class="action-btn btn-start" onclick="saveConfig()">
+                    💾 Vorgaben Speichern
+                </button>
+            </div>
+
+            <div class="card" style="border-left: 4px solid var(--accent);">
+                <div class="card-title">
+                    <span>🔄 Datensicherung & Wiederherstellung</span>
+                </div>
+                <p style="font-size: 13px; color: #555; margin-bottom: 10px;" id="backup-status-text">
+                    Letzte automatische Sicherung: <strong>Heute</strong>
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button type="button" class="action-btn" style="background: var(--primary);" onclick="restoreDailyBackup()">
+                        🔄 Aus Tages-Sicherung wiederherstellen
+                    </button>
+                    <button type="button" class="action-btn" style="background: #27AE60;" onclick="exportBackupFile()">
+                        📥 Sicherung als Datei herunterladen
+                    </button>
+                    <label class="action-btn" style="background: #7F8C8D; display: inline-block; cursor: pointer;">
+                        📤 Sicherungsdatei (.json) einlesen
+                        <input type="file" id="backup-file-input" style="display: none;" accept=".json" onchange="importBackupFile(event)">
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            HoraLog v8.0 — Copyright © by Holger Fritsch — Alle Rechte vorbehalten.
+        </div>
+
+    </div>
+
+    <!-- NAVIGATION -->
+    <nav>
+        <div class="nav-item active" id="nav-today" onclick="switchTab('today')">
+            <span class="nav-icon">⏱️</span>
+            <span>Zeiten</span>
+        </div>
+        <div class="nav-item" id="nav-month" onclick="switchTab('month')">
+            <span class="nav-icon">📅</span>
+            <span>Monat</span>
+        </div>
+        <div class="nav-item" id="nav-settings" onclick="switchTab('settings')">
+            <span class="nav-icon">⚙️</span>
+            <span>Vorgaben</span>
+        </div>
+    </nav>
+
+    <script>
+        let config = JSON.parse(localStorage.getItem('horalog_config')) || null;
+        let timeEntries = JSON.parse(localStorage.getItem('horalog_entries')) || {};
+
+        function initApp() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            document.getElementById('selected-date').value = todayStr;
+            document.getElementById('month-picker').value = todayStr.substring(0, 7);
+
+            performAutoDailyBackup();
+            loadConfig();
+            loadDateData();
+            updateBackupStatusText();
+        }
+
+        /* TÄGLICHE AUTOMATISCHE SICHERUNG */
+        function performAutoDailyBackup() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const lastBackupDate = localStorage.getItem('horalog_last_backup_date');
+
+            if (lastBackupDate !== todayStr) {
+                const backupPayload = {
+                    date: todayStr,
+                    timestamp: new Date().toISOString(),
+                    config: localStorage.getItem('horalog_config'),
+                    entries: localStorage.getItem('horalog_entries')
+                };
+                localStorage.setItem('horalog_daily_auto_backup', JSON.stringify(backupPayload));
+                localStorage.setItem('horalog_last_backup_date', todayStr);
+            }
+        }
+
+        function updateBackupStatusText() {
+            const lastDate = localStorage.getItem('horalog_last_backup_date');
+            const el = document.getElementById('backup-status-text');
+            if (lastDate) {
+                const parts = lastDate.split('-');
+                el.innerHTML = "Letzte automatische Sicherung: <strong>" + parts[2] + "." + parts[1] + "." + parts[0] + "</strong>";
+            } else {
+                el.innerHTML = "Letzte automatische Sicherung: <strong>Noch keine</strong>";
+            }
+        }
+
+        function restoreDailyBackup() {
+            const backupRaw = localStorage.getItem('horalog_daily_auto_backup');
+            if (!backupRaw) {
+                alert("⚠️ Keine automatische Sicherung vorhanden.");
+                return;
+            }
+
+            if (confirm("Möchtest du alle Zeiten und Einstellungen aus der letzten Tages-Sicherung wiederherstellen?")) {
+                const backup = JSON.parse(backupRaw);
+                if (backup.config) localStorage.setItem('horalog_config', backup.config);
+                if (backup.entries) localStorage.setItem('horalog_entries', backup.entries);
+
+                config = JSON.parse(localStorage.getItem('horalog_config')) || null;
+                timeEntries = JSON.parse(localStorage.getItem('horalog_entries')) || {};
+
+                loadConfig();
+                loadDateData();
+                alert("✅ Daten wurden erfolgreich wiederhergestellt!");
+            }
+        }
+
+        function exportBackupFile() {
+            const backupPayload = {
+                version: "8.0",
+                exportedAt: new Date().toISOString(),
+                config: localStorage.getItem('horalog_config'),
+                entries: localStorage.getItem('horalog_entries')
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupPayload, null, 2));
+            const downloadAnchor = document.createElement('a');
+            const fileName = "HoraLog_Sicherung_" + new Date().toISOString().split('T')[0] + ".json";
+
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", fileName);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importBackupFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.entries) {
+                        if (confirm("Sicherungsdatei erfolgreich gelesen! Möchtest du diese Daten jetzt einspielen?")) {
+                            if (data.config) localStorage.setItem('horalog_config', data.config);
+                            if (data.entries) localStorage.setItem('horalog_entries', data.entries);
+
+                            config = JSON.parse(localStorage.getItem('horalog_config')) || null;
+                            timeEntries = JSON.parse(localStorage.getItem('horalog_entries')) || {};
+
+                            loadConfig();
+                            loadDateData();
+                            alert("✅ Sicherungsdatei erfolgreich eingelesen!");
+                        }
+                    } else {
+                        alert("⚠️ Ungültiges Datei-Format.");
+                    }
+                } catch (err) {
+                    alert("⚠️ Fehler beim Lesen der Sicherungsdatei: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function loadConfig() {
+            if (config) {
+                document.getElementById('cfg-days-week').value = config.daysWeek || 5;
+                document.getElementById('cfg-target-hours').value = config.targetHours || "08:00";
+                document.getElementById('cfg-vacation-claim').value = config.vacationClaim || 30;
+                document.getElementById('cfg-vacation-prev').value = config.vacationPrev || 0;
+            }
+        }
+
+        function saveConfig() {
+            config = {
+                daysWeek: parseInt(document.getElementById('cfg-days-week').value),
+                targetHours: document.getElementById('cfg-target-hours').value,
+                vacationClaim: parseInt(document.getElementById('cfg-vacation-claim').value),
+                vacationPrev: parseInt(document.getElementById('cfg-vacation-prev').value)
+            };
+            localStorage.setItem('horalog_config', JSON.stringify(config));
+            performAutoDailyBackup();
+            alert("✅ Vorgaben gespeichert und Tages-Sicherung aktualisiert!");
+            loadDateData();
+        }
+
+        function getSelectedDateKey() {
+            return document.getElementById('selected-date').value;
+        }
+
+        function loadDateData() {
+            const key = getSelectedDateKey();
+            const entry = timeEntries[key] || {};
+
+            document.getElementById('time-start').innerText = entry.start || '--:--';
+            document.getElementById('time-pause-start').innerText = entry.pauseStart || '--:--';
+            document.getElementById('time-pause-end').innerText = entry.pauseEnd || '--:--';
+            document.getElementById('time-end').innerText = entry.end || '--:--';
+
+            document.getElementById('edit-start').value = entry.start || '';
+            document.getElementById('edit-end').value = entry.end || '';
+            document.getElementById('edit-pause-start').value = entry.pauseStart || '';
+            document.getElementById('edit-pause-end').value = entry.pauseEnd || '';
+
+            const activeCode = entry.code || '';
+            document.getElementById('code-btn-norm').classList.toggle('active', activeCode === '');
+            document.getElementById('code-btn-k').classList.toggle('active', activeCode === 'K');
+            document.getElementById('code-btn-u').classList.toggle('active', activeCode === 'U');
+            document.getElementById('code-btn-fx').classList.toggle('active', activeCode === 'FX');
+
+            const targetStr = (config && config.targetHours) ? config.targetHours : "08:00";
+            document.getElementById('day-target').innerText = targetStr + " Std.";
+
+            let actualMinutes = calculateNetMinutes(entry);
+            let actualHoursStr = formatMinutesToHHMM(actualMinutes);
+            document.getElementById('day-actual').innerText = actualHoursStr + " Std.";
+
+            let targetMinutes = parseTimeToMinutes(targetStr);
+            let balanceMinutes = actualMinutes - targetMinutes;
+            let balanceHoursStr = (balanceMinutes >= 0 ? "+" : "") + (balanceMinutes / 60).toFixed(1);
+            document.getElementById('day-balance').innerText = balanceHoursStr + " Std.";
+        }
+
+        function setCode(code) {
+            const key = getSelectedDateKey();
+            if (!timeEntries[key]) timeEntries[key] = {};
+            timeEntries[key].code = code;
+            localStorage.setItem('horalog_entries', JSON.stringify(timeEntries));
+            performAutoDailyBackup();
+            loadDateData();
+        }
+
+        function stamp(type) {
+            const key = getSelectedDateKey();
+            if (!timeEntries[key]) timeEntries[key] = {};
+            const timeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+            if (type === 'start') timeEntries[key].start = timeStr;
+            if (type === 'pauseStart') timeEntries[key].pauseStart = timeStr;
+            if (type === 'pauseEnd') timeEntries[key].pauseEnd = timeStr;
+            if (type === 'end') timeEntries[key].end = timeStr;
+
+            localStorage.setItem('horalog_entries', JSON.stringify(timeEntries));
+            performAutoDailyBackup();
+            loadDateData();
+        }
+
+        function toggleManualEdit() {
+            document.getElementById('manual-edit-card').classList.toggle('hidden');
+        }
+
+        function saveManualEdit() {
+            const key = getSelectedDateKey();
+            if (!timeEntries[key]) timeEntries[key] = {};
+
+            timeEntries[key].start = document.getElementById('edit-start').value;
+            timeEntries[key].end = document.getElementById('edit-end').value;
+            timeEntries[key].pauseStart = document.getElementById('edit-pause-start').value;
+            timeEntries[key].pauseEnd = document.getElementById('edit-pause-end').value;
+
+            localStorage.setItem('horalog_entries', JSON.stringify(timeEntries));
+            performAutoDailyBackup();
+            loadDateData();
+            document.getElementById('manual-edit-card').classList.add('hidden');
+            alert("✅ Zeiten für " + key + " gespeichert!");
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            if (tab === 'today') {
+                document.getElementById('tab-today').classList.remove('hidden');
+                document.getElementById('nav-today').classList.add('active');
+            } else if (tab === 'month') {
+                document.getElementById('tab-month').classList.remove('hidden');
+                document.getElementById('nav-month').classList.add('active');
+                renderMonthTable();
+            } else if (tab === 'settings') {
+                document.getElementById('tab-settings').classList.remove('hidden');
+                document.getElementById('nav-settings').classList.add('active');
+            }
+        }
+
+        function renderMonthTable() {
+            const monthVal = document.getElementById('month-picker').value;
+            if (!monthVal) return;
+
+            const tbody = document.getElementById('month-table-body');
+            tbody.innerHTML = '';
+
+            const [year, month] = monthVal.split('-').map(Number);
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            let totalActualMin = 0;
+            let totalTargetMin = 0;
+            const targetDailyMin = parseTimeToMinutes((config && config.targetHours) ? config.targetHours : "08:00");
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const entry = timeEntries[dateStr] || {};
+                const dateObj = new Date(year, month - 1, day);
+                const isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
+
+                let actualMin = calculateNetMinutes(entry);
+                totalActualMin += actualMin;
+
+                if (!isWeekend && !entry.code) {
+                    totalTargetMin += targetDailyMin;
+                }
+
+                const tr = document.createElement('tr');
+                if (isWeekend) tr.style.background = '#F2F4F4';
+
+                tr.innerHTML = `
+                    <td>${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}</td>
+                    <td>${entry.start || '-'}</td>
+                    <td>${entry.pauseStart && entry.pauseEnd ? (parseTimeToMinutes(entry.pauseEnd) - parseTimeToMinutes(entry.pauseStart)) + 'm' : '-'}</td>
+                    <td>${entry.end || '-'}</td>
+                    <td><strong>${entry.code || '-'}</strong></td>
+                    <td>${formatMinutesToHHMM(actualMin)}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            document.getElementById('month-sum-actual').innerText = formatMinutesToHHMM(totalActualMin) + " Std.";
+            document.getElementById('month-sum-target').innerText = formatMinutesToHHMM(totalTargetMin) + " Std.";
+            let balanceMin = totalActualMin - totalTargetMin;
+            document.getElementById('month-sum-balance').innerText = (balanceMin >= 0 ? "+" : "") + (balanceMin / 60).toFixed(1) + " Std.";
+        }
+
+        function exportPDF() {
+            const monthVal = document.getElementById('month-picker').value;
+            alert("📧 Monatsbericht für " + monthVal + " wird an dein E-Mail-Programm übergeben.");
+            window.location.href = `mailto:?subject=HoraLog Monatsnachweis ${monthVal}&body=Anbei die Arbeitszeiterfassung für ${monthVal}.`;
+        }
+
+        function parseTimeToMinutes(timeStr) {
+            if (!timeStr || !timeStr.includes(':')) return 0;
+            const [h, m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        function formatMinutesToHHMM(minutes) {
+            if (minutes <= 0) return "00:00";
+            let h = Math.floor(minutes / 60);
+            let m = minutes % 60;
+            return String(h).padStart(2, '0') + ":" + String(m).padStart(2, '0');
+        }
+
+        function calculateNetMinutes(entry) {
+            if (!entry || !entry.start || !entry.end) return 0;
+            let startMin = parseTimeToMinutes(entry.start);
+            let endMin = parseTimeToMinutes(entry.end);
+            let grossMin = endMin - startMin;
+            if (grossMin < 0) grossMin += 24 * 60;
+
+            let pauseMin = 0;
+            if (entry.pauseStart && entry.pauseEnd) {
+                pauseMin = parseTimeToMinutes(entry.pauseEnd) - parseTimeToMinutes(entry.pauseStart);
+            }
+            return Math.max(0, grossMin - pauseMin);
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
