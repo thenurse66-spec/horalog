@@ -240,7 +240,10 @@
 </head>
 <body>
 
-    <header>HoraLog — Arbeitszeiterfassung</header>
+    <header>
+        <div>HoraLog — Arbeitszeiterfassung</div>
+        <div id="user-header-name" style="font-size: 13px; font-weight: normal; opacity: 0.9; margin-top: 2px;"></div>
+    </header>
 
     <div class="container">
 
@@ -333,7 +336,10 @@
         <div id="tab-month" class="tab-content hidden">
             <div class="card">
                 <div class="card-title">
-                    <span>Monatsübersicht</span>
+                    <div>
+                        <span>Monatsübersicht</span>
+                        <div id="month-user-name" style="font-size: 12px; font-weight: normal; color: #555;"></div>
+                    </div>
                     <input type="month" id="month-picker" class="form-control" style="width: auto; font-size: 13px;" onchange="renderMonthTable()">
                 </div>
 
@@ -375,6 +381,16 @@
         <div id="tab-settings" class="tab-content hidden">
             <div class="card">
                 <div class="card-title">Arbeitszeitmodell & Vorgaben</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label>Vorname</label>
+                        <input type="text" id="cfg-first-name" class="form-control" placeholder="Vorname" oninput="updateHeaderName()">
+                    </div>
+                    <div class="form-group">
+                        <label>Nachname</label>
+                        <input type="text" id="cfg-last-name" class="form-control" placeholder="Nachname" oninput="updateHeaderName()">
+                    </div>
+                </div>
                 <div class="form-group">
                     <label>Arbeitstage pro Woche</label>
                     <input type="number" id="cfg-days-week" class="form-control" value="5" min="1" max="7">
@@ -553,17 +569,34 @@
             reader.readAsText(file);
         }
 
+        function updateHeaderName() {
+            const firstName = document.getElementById('cfg-first-name') ? document.getElementById('cfg-first-name').value.trim() : (config?.firstName || '');
+            const lastName = document.getElementById('cfg-last-name') ? document.getElementById('cfg-last-name').value.trim() : (config?.lastName || '');
+            const fullName = [firstName, lastName].filter(Boolean).join(' ');
+            
+            const headerEl = document.getElementById('user-header-name');
+            if (headerEl) headerEl.innerText = fullName ? `Mitarbeiter: ${fullName}` : '';
+            
+            const monthNameEl = document.getElementById('month-user-name');
+            if (monthNameEl) monthNameEl.innerText = fullName ? `Mitarbeiter: ${fullName}` : '';
+        }
+
         function loadConfig() {
             if (config) {
+                if (document.getElementById('cfg-first-name')) document.getElementById('cfg-first-name').value = config.firstName || '';
+                if (document.getElementById('cfg-last-name')) document.getElementById('cfg-last-name').value = config.lastName || '';
                 document.getElementById('cfg-days-week').value = config.daysWeek || 5;
                 document.getElementById('cfg-target-hours').value = config.targetHours || "08:00";
                 document.getElementById('cfg-vacation-claim').value = config.vacationClaim || 30;
                 document.getElementById('cfg-vacation-prev').value = config.vacationPrev || 0;
             }
+            updateHeaderName();
         }
 
         function saveConfig() {
             config = {
+                firstName: document.getElementById('cfg-first-name').value.trim(),
+                lastName: document.getElementById('cfg-last-name').value.trim(),
                 daysWeek: parseInt(document.getElementById('cfg-days-week').value),
                 targetHours: document.getElementById('cfg-target-hours').value,
                 vacationClaim: parseInt(document.getElementById('cfg-vacation-claim').value),
@@ -722,8 +755,20 @@
 
         function exportPDF() {
             const monthVal = document.getElementById('month-picker').value;
-            alert("📧 Monatsbericht für " + monthVal + " wird an dein E-Mail-Programm übergeben.");
-            window.location.href = `mailto:?subject=HoraLog Monatsnachweis ${monthVal}&body=Anbei die Arbeitszeiterfassung für ${monthVal}.`;
+            const firstName = config?.firstName || '';
+            const lastName = config?.lastName || '';
+            const fullName = [firstName, lastName].filter(Boolean).join(' ');
+            const nameSuffix = fullName ? ` - ${fullName}` : '';
+            
+            const subject = encodeURIComponent(`HoraLog Monatsnachweis ${monthVal}${nameSuffix}`);
+            const body = encodeURIComponent(`Hallo,
+
+anbei die Arbeitszeiterfassung für den Monat ${monthVal}` + (fullName ? ` von ${fullName}` : '') + `.
+
+Mit freundlichen Grüßen`);
+            
+            alert("📧 Monatsbericht für " + monthVal + (fullName ? " (" + fullName + ")" : "") + " wird an dein E-Mail-Programm übergeben.");
+            window.location.href = `mailto:?subject=${subject}&body=${body}`;
         }
 
         function parseTimeToMinutes(timeStr) {
