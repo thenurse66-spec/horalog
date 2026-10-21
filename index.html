@@ -260,18 +260,23 @@
                         <span>🟢 Beginn</span>
                         <span class="time-display" id="time-start">--:--</span>
                     </button>
-                    <button type="button" class="btn-stamp btn-pause-start" onclick="stamp('pauseStart')">
-                        <span>⏸️ Pause Start</span>
-                        <span class="time-display" id="time-pause-start">--:--</span>
-                    </button>
-                    <button type="button" class="btn-stamp btn-pause-end" onclick="stamp('pauseEnd')">
-                        <span>▶️ Pause Ende</span>
-                        <span class="time-display" id="time-pause-end">--:--</span>
-                    </button>
                     <button type="button" class="btn-stamp btn-end" onclick="stamp('end')">
                         <span>🔴 Ende</span>
                         <span class="time-display" id="time-end">--:--</span>
                     </button>
+                    <button type="button" class="btn-stamp btn-pause-start" id="btn-pause-toggle" onclick="togglePauseStamp()" style="grid-column: span 2;">
+                        <span id="lbl-pause-toggle">⏸️ Pause Starten</span>
+                        <span class="time-display" id="time-pause-summary">Keine aktive Pause</span>
+                    </button>
+                </div>
+
+                <!-- Display list of logged pauses for today -->
+                <div id="pauses-list-container" style="background: #F8F9FA; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 13px;">
+                    <div style="font-weight: bold; color: var(--primary); margin-bottom: 6px; display: flex; justify-content: space-between;">
+                        <span>Erfasste Pausen:</span>
+                        <span id="total-pause-display">0 Min.</span>
+                    </div>
+                    <div id="pauses-list"><i>Keine Pausen erfasst</i></div>
                 </div>
 
                 <button type="button" class="code-btn" style="width: 100%; background: #EBF5FB; color: var(--primary); margin-top: 6px;" onclick="toggleManualEdit()">
@@ -291,16 +296,17 @@
                         <label>Arbeitsende</label>
                         <input type="time" id="edit-end" class="form-control">
                     </div>
-                    <div class="form-group">
-                        <label>Pause Start</label>
-                        <input type="time" id="edit-pause-start" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label>Pause Ende</label>
-                        <input type="time" id="edit-pause-end" class="form-control">
-                    </div>
                 </div>
-                <button type="button" class="action-btn btn-start" onclick="saveManualEdit()">
+                
+                <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+                    <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Pausenzeiten</span>
+                        <button type="button" onclick="addPauseInput()" style="background: var(--primary); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer;">+ Pause hinzufügen</button>
+                    </div>
+                    <div id="manual-pauses-edit-container"></div>
+                </div>
+
+                <button type="button" class="action-btn btn-start" style="margin-top: 12px;" onclick="saveManualEdit()">
                     💾 Korrektur Speichern
                 </button>
             </div>
@@ -612,19 +618,60 @@
             return document.getElementById('selected-date').value;
         }
 
+        function getNormalizedPauses(entry) {
+            if (!entry) return [];
+            let list = [];
+            if (entry.pauses && Array.isArray(entry.pauses)) {
+                list = [...entry.pauses];
+            } else if (entry.pauseStart || entry.pauseEnd) {
+                list.push({ start: entry.pauseStart || '', end: entry.pauseEnd || '' });
+            }
+            return list;
+        }
+
+        function calculateTotalPauseMinutes(entry) {
+            const pauses = getNormalizedPauses(entry);
+            let total = 0;
+            pauses.forEach(p => {
+                if (p.start && p.end) {
+                    let duration = parseTimeToMinutes(p.end) - parseTimeToMinutes(p.start);
+                    if (duration < 0) duration += 24 * 60;
+                    total += Math.max(0, duration);
+                }
+            });
+            return total;
+        }
+
         function loadDateData() {
             const key = getSelectedDateKey();
             const entry = timeEntries[key] || {};
 
             document.getElementById('time-start').innerText = entry.start || '--:--';
-            document.getElementById('time-pause-start').innerText = entry.pauseStart || '--:--';
-            document.getElementById('time-pause-end').innerText = entry.pauseEnd || '--:--';
             document.getElementById('time-end').innerText = entry.end || '--:--';
 
             document.getElementById('edit-start').value = entry.start || '';
             document.getElementById('edit-end').value = entry.end || '';
-            document.getElementById('edit-pause-start').value = entry.pauseStart || '';
-            document.getElementById('edit-pause-end').value = entry.pauseEnd || '';
+
+            const pauses = getNormalizedPauses(entry);
+            renderPausesList(pauses);
+            renderManualPausesEdit(pauses);
+
+            // Check if there is an active open pause
+            const hasOpenPause = pauses.length > 0 && pauses[pauses.length - 1].start && !pauses[pauses.length - 1].end;
+            const toggleBtn = document.getElementById('btn-pause-toggle');
+            const toggleLbl = document.getElementById('lbl-pause-toggle');
+            const toggleSum = document.getElementById('time-pause-summary');
+
+            if (hasOpenPause) {
+                toggleBtn.style.backgroundColor = "#2980B9";
+                toggleLbl.innerText = "▶️ Pause Beenden";
+                toggleSum.innerText = "Aktiv seit " + pauses[pauses.length - 1].start;
+            } else {
+                toggleBtn.style.backgroundColor = "#E67E22";
+                toggleLbl.innerText = "⏸️ Pause Starten";
+                const totalP = calculateTotalPauseMinutes(entry);
+                toggleSum.innerText = totalP > 0 ? `Gesamt: ${totalP} Min.` : "Keine aktive Pause";
+            }
 
             const activeCode = entry.code || '';
             document.getElementById('code-btn-norm').classList.toggle('active', activeCode === '');
@@ -643,6 +690,110 @@
             let balanceMinutes = actualMinutes - targetMinutes;
             let balanceHoursStr = (balanceMinutes >= 0 ? "+" : "") + (balanceMinutes / 60).toFixed(1);
             document.getElementById('day-balance').innerText = balanceHoursStr + " Std.";
+        }
+
+        function renderPausesList(pauses) {
+            const container = document.getElementById('pauses-list');
+            const totalDisplay = document.getElementById('total-pause-display');
+            if (!container) return;
+
+            let totalMin = 0;
+            if (!pauses || pauses.length === 0) {
+                container.innerHTML = "<i>Keine Pausen erfasst</i>";
+                totalDisplay.innerText = "0 Min.";
+                return;
+            }
+
+            let htmlStr = '<div style="display: flex; flex-direction: column; gap: 4px;">';
+            pauses.forEach((p, idx) => {
+                let duration = 0;
+                let statusText = "";
+                if (p.start && p.end) {
+                    duration = parseTimeToMinutes(p.end) - parseTimeToMinutes(p.start);
+                    if (duration < 0) duration += 24 * 60;
+                    totalMin += Math.max(0, duration);
+                    statusText = `${p.start} - ${p.end} (${duration} Min.)`;
+                } else if (p.start) {
+                    statusText = `${p.start} - läuft...`;
+                }
+                htmlStr += `<div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 4px 8px; border-radius: 4px; border: 1px solid #E2E8F0;">
+                    <span>Pause ${idx + 1}: <strong>${statusText}</strong></span>
+                    <button type="button" onclick="deletePause(${idx})" style="background: none; border: none; color: #C0392B; font-weight: bold; cursor: pointer; padding: 2px 6px;">✕</button>
+                </div>`;
+            });
+            htmlStr += '</div>';
+
+            container.innerHTML = htmlStr;
+            totalDisplay.innerText = totalMin + " Min.";
+        }
+
+        function togglePauseStamp() {
+            const key = getSelectedDateKey();
+            if (!timeEntries[key]) timeEntries[key] = {};
+            let pauses = getNormalizedPauses(timeEntries[key]);
+            const timeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+            const hasOpenPause = pauses.length > 0 && pauses[pauses.length - 1].start && !pauses[pauses.length - 1].end;
+
+            if (hasOpenPause) {
+                pauses[pauses.length - 1].end = timeStr;
+            } else {
+                pauses.push({ start: timeStr, end: '' });
+            }
+
+            timeEntries[key].pauses = pauses;
+            delete timeEntries[key].pauseStart;
+            delete timeEntries[key].pauseEnd;
+
+            localStorage.setItem('horalog_entries', JSON.stringify(timeEntries));
+            performAutoDailyBackup();
+            loadDateData();
+        }
+
+        function deletePause(index) {
+            const key = getSelectedDateKey();
+            if (!timeEntries[key]) return;
+            let pauses = getNormalizedPauses(timeEntries[key]);
+            pauses.splice(index, 1);
+            timeEntries[key].pauses = pauses;
+            delete timeEntries[key].pauseStart;
+            delete timeEntries[key].pauseEnd;
+
+            localStorage.setItem('horalog_entries', JSON.stringify(timeEntries));
+            performAutoDailyBackup();
+            loadDateData();
+        }
+
+        function renderManualPausesEdit(pauses) {
+            const container = document.getElementById('manual-pauses-edit-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            pauses.forEach((p, idx) => {
+                const row = document.createElement('div');
+                row.className = 'manual-pause-row';
+                row.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 8px;';
+                row.innerHTML = `
+                    <div style="flex:1;"><label style="font-size:11px;">Start</label><input type="time" class="form-control manual-p-start" value="${p.start || ''}"></div>
+                    <div style="flex:1;"><label style="font-size:11px;">Ende</label><input type="time" class="form-control manual-p-end" value="${p.end || ''}"></div>
+                    <button type="button" onclick="this.parentElement.remove()" style="background: #E74C3C; color: white; border: none; border-radius: 4px; padding: 6px 10px; margin-top: 14px; cursor: pointer;">✕</button>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function addPauseInput() {
+            const container = document.getElementById('manual-pauses-edit-container');
+            if (!container) return;
+            const row = document.createElement('div');
+            row.className = 'manual-pause-row';
+            row.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 8px;';
+            row.innerHTML = `
+                <div style="flex:1;"><label style="font-size:11px;">Start</label><input type="time" class="form-control manual-p-start" value=""></div>
+                <div style="flex:1;"><label style="font-size:11px;">Ende</label><input type="time" class="form-control manual-p-end" value=""></div>
+                <button type="button" onclick="this.parentElement.remove()" style="background: #E74C3C; color: white; border: none; border-radius: 4px; padding: 6px 10px; margin-top: 14px; cursor: pointer;">✕</button>
+            `;
+            container.appendChild(row);
         }
 
         function setCode(code) {
@@ -679,8 +830,18 @@
 
             timeEntries[key].start = document.getElementById('edit-start').value;
             timeEntries[key].end = document.getElementById('edit-end').value;
-            timeEntries[key].pauseStart = document.getElementById('edit-pause-start').value;
-            timeEntries[key].pauseEnd = document.getElementById('edit-pause-end').value;
+
+            let pauses = [];
+            document.querySelectorAll('#manual-pauses-edit-container .manual-pause-row').forEach(row => {
+                let s = row.querySelector('.manual-p-start').value;
+                let e = row.querySelector('.manual-p-end').value;
+                if (s || e) {
+                    pauses.push({ start: s, end: e });
+                }
+            });
+            timeEntries[key].pauses = pauses;
+            delete timeEntries[key].pauseStart;
+            delete timeEntries[key].pauseEnd;
 
             localStorage.setItem('horalog_entries', JSON.stringify(timeEntries));
             performAutoDailyBackup();
@@ -739,7 +900,7 @@
                 tr.innerHTML = `
                     <td>${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}</td>
                     <td>${entry.start || '-'}</td>
-                    <td>${entry.pauseStart && entry.pauseEnd ? (parseTimeToMinutes(entry.pauseEnd) - parseTimeToMinutes(entry.pauseStart)) + 'm' : '-'}</td>
+                    <td>${calculateTotalPauseMinutes(entry) > 0 ? calculateTotalPauseMinutes(entry) + 'm' : '-'}</td>
                     <td>${entry.end || '-'}</td>
                     <td><strong>${entry.code || '-'}</strong></td>
                     <td>${formatMinutesToHHMM(actualMin)}</td>
@@ -791,10 +952,7 @@ Mit freundlichen Grüßen`);
             let grossMin = endMin - startMin;
             if (grossMin < 0) grossMin += 24 * 60;
 
-            let pauseMin = 0;
-            if (entry.pauseStart && entry.pauseEnd) {
-                pauseMin = parseTimeToMinutes(entry.pauseEnd) - parseTimeToMinutes(entry.pauseStart);
-            }
+            let pauseMin = calculateTotalPauseMinutes(entry);
             return Math.max(0, grossMin - pauseMin);
         }
 
