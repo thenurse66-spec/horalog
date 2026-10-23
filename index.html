@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HoraLog v9.8</title>
+    <title>HoraLog v9.9</title>
     <meta name="theme-color" content="#1F497D">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -244,6 +244,13 @@
         <div>HoraLog — Arbeitszeiterfassung</div>
         <div id="user-header-name" style="font-size: 13px; font-weight: normal; opacity: 0.9; margin-top: 2px;"></div>
     </header>
+
+    <!-- AUTO UPDATE NOTIFICATION BANNER -->
+    <div id="update-banner" style="display: none; background: #27AE60; color: white; padding: 12px 16px; text-align: center; font-size: 13px; font-weight: bold; position: sticky; top: 52px; z-index: 101; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+        <span>🔄 Eine neue Version von HoraLog ist verfügbar!</span>
+        <button onclick="applyPWAUpdate()" style="margin-left: 10px; background: white; color: #27AE60; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">Jetzt aktualisieren</button>
+    </div>
+
 
     <div class="container">
 
@@ -494,7 +501,7 @@
 
             <div class="card" style="border-left: 4px solid var(--accent);">
                 <div class="card-title">
-                    <span>🔄 Datensicherung & Wiederherstellung</span>
+                    <span>🔄 Datensicherung & Software-Update</span>
                 </div>
                 <p style="font-size: 13px; color: #555; margin-bottom: 10px;" id="backup-status-text">
                     Letzte automatische Sicherung: <strong>Heute</strong>
@@ -510,12 +517,15 @@
                         📤 Sicherungsdatei (.json) einlesen
                         <input type="file" id="backup-file-input" style="display: none;" accept=".json" onchange="importBackupFile(event)">
                     </label>
+                    <button type="button" class="action-btn" style="background: #2980B9; margin-top: 6px;" onclick="forcePWAUpdate()">
+                        🔄 App-Version prüfen & Cache aktualisieren
+                    </button>
                 </div>
             </div>
         </div>
 
         <div class="footer-note">
-            HoraLog v9.8 — Copyright © by Holger Fritsch — Alle Rechte vorbehalten.
+            HoraLog v9.9 — Copyright © by Holger Fritsch — Alle Rechte vorbehalten.
         </div>
 
     </div>
@@ -603,7 +613,7 @@
         function exportBackupFile() {
             const backupPayload = {
                 version: "8.0",
-                version: '9.8',
+                version: '9.9',
                 exportedAt: new Date().toISOString(),
                 config: localStorage.getItem('horalog_config'),
                 entries: localStorage.getItem('horalog_entries')
@@ -729,6 +739,58 @@
             } else {
                 stopKeepAlive();
             }
+        }
+
+        
+        // Service Worker Registration & Auto-Update Handler
+        let newWorker = null;
+
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    reg.addEventListener('updatefound', () => {
+                        newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                document.getElementById('update-banner').style.display = 'block';
+                            }
+                        });
+                    });
+                }).catch(err => console.log('SW Registration failed:', err));
+
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (!refreshing) {
+                        refreshing = true;
+                        window.location.reload();
+                    }
+                });
+            }
+        }
+
+        function applyPWAUpdate() {
+            if (newWorker) {
+                newWorker.postMessage({ action: 'skipWaiting' });
+            } else {
+                window.location.reload(true);
+            }
+        }
+
+        function forcePWAUpdate() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    for (let registration of registrations) {
+                        registration.update();
+                    }
+                });
+            }
+            if (caches) {
+                caches.keys().then(names => {
+                    for (let name of names) caches.delete(name);
+                });
+            }
+            alert("✅ Cache gelöscht! Die App lädt jetzt neu...");
+            window.location.reload(true);
         }
 
         let watchPositionId = null;
@@ -1266,7 +1328,8 @@ Mit freundlichen Grüßen`);
             return Math.max(0, grossMin - pauseMin);
         }
 
-        window.onload = function() { initApp(); startGeofenceWatcher(); initKeepAlive(); };
+        window.onload = function() { initApp(); startGeofenceWatcher(); initKeepAlive(); registerServiceWorker(); };
     </script>
 </body>
 </html>
+
