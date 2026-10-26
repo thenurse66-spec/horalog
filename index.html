@@ -525,13 +525,13 @@
             return holidays[dateStr] || null;
         }
 
-        function isWorkDayTarget(dateStr, entryCode) {
+        /* SOLLZEIT-PRÜFUNG: Nur an Wochenenden und Feiertagen ist die Sollzeit 0 */
+        function isWorkDayTarget(dateStr) {
             const dateObj = new Date(dateStr);
             const isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
             const holidayName = getNRWHolidayName(dateStr);
 
-            // Keine Sollzeit an Wochenenden, Feiertagen oder bei Code (K, U)
-            if (isWeekend || holidayName || entryCode === 'K' || entryCode === 'U') {
+            if (isWeekend || holidayName) {
                 return 0;
             }
 
@@ -650,8 +650,8 @@
             document.getElementById('code-btn-u').classList.toggle('active', activeCode === 'U');
             document.getElementById('code-btn-fx').classList.toggle('active', activeCode === 'FX');
 
-            // Soll-Zeit unter Berücksichtigung von Feiertagen berechnen
-            let targetMinutes = isWorkDayTarget(key, entry.code);
+            // Soll-Zeit für den Tag abrufen
+            let targetMinutes = isWorkDayTarget(key);
             document.getElementById('day-target').innerText = formatMinutesToHHMM(targetMinutes) + " Std.";
 
             let actualMinutes = calculateNetMinutes(entry, key);
@@ -844,7 +844,7 @@
                 let actualMin = calculateNetMinutes(entry, dateStr);
                 totalActualMin += actualMin;
 
-                let targetMin = isWorkDayTarget(dateStr, entry.code);
+                let targetMin = isWorkDayTarget(dateStr);
                 totalTargetMin += targetMin;
             }
             return { actualMin: totalActualMin, targetMin: totalTargetMin, balanceMin: totalActualMin - totalTargetMin };
@@ -892,7 +892,7 @@
                 let actualMin = calculateNetMinutes(entry, dateStr);
                 totalActualMin += actualMin;
 
-                let targetMin = isWorkDayTarget(dateStr, entry.code);
+                let targetMin = isWorkDayTarget(dateStr);
                 totalTargetMin += targetMin;
 
                 const tr = document.createElement('tr');
@@ -958,16 +958,15 @@
             return String(h).padStart(2, '0') + ":" + String(m).padStart(2, '0');
         }
 
+        /* NETTO-ISTZEIT BERECHNUNG: Urlaub (U) & Krank (K) schreiben die volle Tages-Sollzeit gut */
         function calculateNetMinutes(entry, dateStr) {
             if (!entry) return 0;
-            const targetDailyMin = parseTimeToMinutes((config && config.targetHours) ? config.targetHours : "08:00");
+            const targetDailyMin = isWorkDayTarget(dateStr);
             
-            // Urlaub (U) oder Krank (K) schreibt bei regulärem Arbeitstag Sollstunden als Iststunden gut
             if (entry.code === 'U' || entry.code === 'K') {
-                return isWorkDayTarget(dateStr, '');
+                return targetDailyMin;
             }
 
-            // Flexi (FX) = 0 Ist-Stunden
             if (entry.code === 'FX') {
                 return 0;
             }
