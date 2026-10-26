@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HoraLog v9.14</title>
+    <title>HoraLog v9.15</title>
     <meta name="theme-color" content="#1F497D">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -452,6 +452,22 @@
 
                 <div id="geo-settings-details">
                     <div class="form-group">
+                        <label>Aktion beim Betreten des Radius</label>
+                        <select id="geoActionEnter" class="form-control">
+                            <option value="start" selected>Arbeitsbeginn (🟢 Start)</option>
+                            <option value="pauseEnd">Pause beenden (▶️ Pause Ende)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Aktion beim Verlassen des Radius</label>
+                        <select id="geoActionLeave" class="form-control">
+                            <option value="end" selected>Arbeitszeitende (🔴 Ende)</option>
+                            <option value="pauseStart">Pausenbeginn (⏸️ Pause Start)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
                         <label>Prüfintervall (Hintergrund-Sync)</label>
                         <select id="geoInterval" class="form-control">
                             <option value="5">Alle 5 Minuten</option>
@@ -508,7 +524,7 @@
         </div>
 
         <div class="footer-note">
-            HoraLog v9.14 — Copyright © by Holger Fritsch — Alle Rechte vorbehalten.
+            HoraLog v9.15 — Copyright © by Holger Fritsch — Alle Rechte vorbehalten.
         </div>
 
     </div>
@@ -534,6 +550,8 @@
         let timeEntries = JSON.parse(localStorage.getItem('horalog_entries')) || {};
         let geoConfig = {
             mode: localStorage.getItem('horalog_geoMode') || 'disabled',
+            actionEnter: localStorage.getItem('horalog_geoActionEnter') || 'start',
+            actionLeave: localStorage.getItem('horalog_geoActionLeave') || 'end',
             interval: localStorage.getItem('horalog_geoInterval') || '15',
             lat: localStorage.getItem('horalog_geoLat') || null,
             lon: localStorage.getItem('horalog_geoLon') || null,
@@ -651,6 +669,8 @@
         /* GEOFENCE & ADRESSSUCHE LOGIK */
         function loadGeoConfig() {
             if (document.getElementById('geoMode')) document.getElementById('geoMode').value = geoConfig.mode;
+            if (document.getElementById('geoActionEnter')) document.getElementById('geoActionEnter').value = geoConfig.actionEnter;
+            if (document.getElementById('geoActionLeave')) document.getElementById('geoActionLeave').value = geoConfig.actionLeave;
             if (document.getElementById('geoInterval')) document.getElementById('geoInterval').value = geoConfig.interval;
             if (document.getElementById('geoLat')) document.getElementById('geoLat').value = geoConfig.lat || '';
             if (document.getElementById('geoLon')) document.getElementById('geoLon').value = geoConfig.lon || '';
@@ -669,7 +689,6 @@
             }
         }
 
-        // 1. Adresssuche via Nominatim
         async function searchAddressApi() {
             const address = document.getElementById('geoAddressInput').value.trim();
             if (!address) {
@@ -692,11 +711,10 @@
                     alert("Adresse konnte nicht automatisch aufgelöst werden. Du kannst auch die aktuelle GPS-Position nutzen.");
                 }
             } catch (err) {
-                alert("Hinweis: Automatische Suche blockiert. Verwende den Button 'GPS-Pos. nutzen' auf dem Handy oder gib die Koordinaten manuell ein.");
+                alert("Hinweis: Automatische Suche blockiert. Verwende den Button 'GPS-Pos. nutzen' auf dem Handy.");
             }
         }
 
-        // 2. Aktuelle GPS-Position des Geräts übernehmen
         function useCurrentPosition() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -719,6 +737,8 @@
 
         function saveGeoConfig() {
             const mode = document.getElementById('geoMode').value;
+            const actionEnter = document.getElementById('geoActionEnter').value;
+            const actionLeave = document.getElementById('geoActionLeave').value;
             const interval = document.getElementById('geoInterval').value;
             const lat = document.getElementById('geoLat').value.trim();
             const lon = document.getElementById('geoLon').value.trim();
@@ -726,13 +746,15 @@
             const address = document.getElementById('geoAddressInput').value.trim();
 
             localStorage.setItem('horalog_geoMode', mode);
+            localStorage.setItem('horalog_geoActionEnter', actionEnter);
+            localStorage.setItem('horalog_geoActionLeave', actionLeave);
             localStorage.setItem('horalog_geoInterval', interval);
             localStorage.setItem('horalog_geoLat', lat);
             localStorage.setItem('horalog_geoLon', lon);
             localStorage.setItem('horalog_geoRadius', radius);
             localStorage.setItem('horalog_geoAddress', address);
 
-            geoConfig = { mode, interval, lat, lon, radius, address };
+            geoConfig = { mode, actionEnter, actionLeave, interval, lat, lon, radius, address };
             alert("📍 Standort-Einstellungen gespeichert!");
             setupCapacitorGeofence();
         }
@@ -936,8 +958,22 @@
             const timeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
             if (type === 'start') timeEntries[key].start = timeStr;
-            if (type === 'pauseStart') timeEntries[key].pauseStart = timeStr;
-            if (type === 'pauseEnd') timeEntries[key].pauseEnd = timeStr;
+            if (type === 'pauseStart') {
+                let pauses = getNormalizedPauses(timeEntries[key]);
+                const hasOpen = pauses.length > 0 && pauses[pauses.length - 1].start && !pauses[pauses.length - 1].end;
+                if (!hasOpen) {
+                    pauses.push({ start: timeStr, end: '' });
+                    timeEntries[key].pauses = pauses;
+                }
+            }
+            if (type === 'pauseEnd') {
+                let pauses = getNormalizedPauses(timeEntries[key]);
+                const hasOpen = pauses.length > 0 && pauses[pauses.length - 1].start && !pauses[pauses.length - 1].end;
+                if (hasOpen) {
+                    pauses[pauses.length - 1].end = timeStr;
+                    timeEntries[key].pauses = pauses;
+                }
+            }
             if (type === 'end') timeEntries[key].end = timeStr;
 
             localStorage.setItem('horalog_entries', JSON.stringify(timeEntries));
@@ -1229,8 +1265,11 @@
                                     );
                                     const isInside = dist <= (parseInt(geoConfig.radius, 10) || 300);
                                     if (lastGeoInside !== null && lastGeoInside !== isInside) {
-                                        if (isInside) stamp('start');
-                                        else stamp('end');
+                                        if (isInside) {
+                                            stamp(geoConfig.actionEnter || 'start');
+                                        } else {
+                                            stamp(geoConfig.actionLeave || 'end');
+                                        }
                                     }
                                     lastGeoInside = isInside;
                                 }
