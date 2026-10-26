@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HoraLog v9.15</title>
+    <title>HoraLog v9.18</title>
     <meta name="theme-color" content="#1F497D">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -445,37 +445,11 @@
                     <label>Modus der Standortbestimmung</label>
                     <select id="geoMode" class="form-control" onchange="toggleGeoModeUI()">
                         <option value="disabled">Inaktiv (GPS ausgeschaltet)</option>
-                        <option value="foreground">Nur bei aktiver App (Vordergrund)</option>
-                        <option value="background">Immer / Geofencing (Hintergrund)</option>
+                        <option value="background">Aktiv (Hintergrund-Geofencing mit Benachrichtigung)</option>
                     </select>
                 </div>
 
                 <div id="geo-settings-details">
-                    <div class="form-group">
-                        <label>Aktion beim Betreten des Radius</label>
-                        <select id="geoActionEnter" class="form-control">
-                            <option value="start" selected>Arbeitsbeginn (🟢 Start)</option>
-                            <option value="pauseEnd">Pause beenden (▶️ Pause Ende)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Aktion beim Verlassen des Radius</label>
-                        <select id="geoActionLeave" class="form-control">
-                            <option value="end" selected>Arbeitszeitende (🔴 Ende)</option>
-                            <option value="pauseStart">Pausenbeginn (⏸️ Pause Start)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Prüfintervall (Hintergrund-Sync)</label>
-                        <select id="geoInterval" class="form-control">
-                            <option value="5">Alle 5 Minuten</option>
-                            <option value="15" selected>Alle 15 Minuten (empfohlen)</option>
-                            <option value="30">Alle 30 Minuten</option>
-                        </select>
-                    </div>
-
                     <div class="form-group">
                         <label>Arbeitsadresse</label>
                         <input type="text" id="geoAddressInput" class="form-control" placeholder="z. B. Hohestraße 1, Köln">
@@ -507,11 +481,15 @@
                 </button>
             </div>
 
-            <!-- DATEN-SICHERUNG & TRANSFER -->
+            <!-- DATEN-SICHERUNG, TRANSFER & UPDATES -->
             <div class="card">
-                <div class="card-title">Daten sichern & übertragen</div>
-                <p style="font-size: 13px; color: #666; margin-bottom: 12px;">Übertrage deine Stempeldaten und Einstellungen zwischen PC-Browser und Handy-App.</p>
+                <div class="card-title">System, Daten & Updates</div>
+                <p style="font-size: 13px; color: #666; margin-bottom: 12px;">Aktuelle Version: <strong>v9.18</strong></p>
                 
+                <button type="button" class="action-btn btn-info" style="margin-bottom: 10px;" onclick="checkForUpdates(true)">
+                    🔄 Manuell nach Updates suchen
+                </button>
+
                 <button type="button" class="action-btn btn-secondary" onclick="exportHoraLogData()">
                     📤 Daten als JSON-Datei exportieren
                 </button>
@@ -524,7 +502,7 @@
         </div>
 
         <div class="footer-note">
-            HoraLog v9.15 — Copyright © by Holger Fritsch — Alle Rechte vorbehalten.
+            HoraLog v9.18 — Copyright © by Holger Fritsch — Alle Rechte vorbehalten.
         </div>
 
     </div>
@@ -546,13 +524,14 @@
     </nav>
 
     <script>
+        const CURRENT_VERSION = "9.18";
+        // Direkt verknüpft mit deinem GitHub Repository 'horalog-updates'
+        const UPDATE_CHECK_URL = "https://raw.githubusercontent.com/thenurse66-spec/horalog-updates/main/version.json"; 
+
         let config = JSON.parse(localStorage.getItem('horalog_config')) || null;
         let timeEntries = JSON.parse(localStorage.getItem('horalog_entries')) || {};
         let geoConfig = {
             mode: localStorage.getItem('horalog_geoMode') || 'disabled',
-            actionEnter: localStorage.getItem('horalog_geoActionEnter') || 'start',
-            actionLeave: localStorage.getItem('horalog_geoActionLeave') || 'end',
-            interval: localStorage.getItem('horalog_geoInterval') || '15',
             lat: localStorage.getItem('horalog_geoLat') || null,
             lon: localStorage.getItem('horalog_geoLon') || null,
             radius: localStorage.getItem('horalog_geoRadius') || 300,
@@ -568,7 +547,42 @@
             loadConfig();
             loadGeoConfig();
             loadDateData();
+            registerLocalNotificationActionListeners();
             setupCapacitorGeofence();
+            
+            // Automatische Update-Prüfung 2 Sekunden nach App-Start
+            setTimeout(() => checkForUpdates(false), 2000);
+        }
+
+        /* AUTO-UPDATE LOGIK */
+        async function checkForUpdates(isManual = false) {
+            if (!navigator.onLine) {
+                if (isManual) alert("Keine Internetverbindung verfügbar.");
+                return;
+            }
+
+            try {
+                const response = await fetch(UPDATE_CHECK_URL, { cache: "no-store" });
+                const data = await response.json();
+
+                if (data && data.version && data.version > CURRENT_VERSION) {
+                    const userConfirm = confirm(
+                        `🎉 Eine neue Version (v${data.version}) von HoraLog ist verfügbar!\n\n` +
+                        `Neuerungen:\n${data.notes || 'Diverse Optimierungen & Fixes'}\n\n` +
+                        `Möchtest du das Update jetzt herunterladen und installieren?`
+                    );
+
+                    if (userConfirm && data.downloadUrl) {
+                        window.open(data.downloadUrl, '_system');
+                    }
+                } else if (isManual) {
+                    alert(`✅ HoraLog ist auf dem neuesten Stand (v${CURRENT_VERSION}).`);
+                }
+            } catch (e) {
+                if (isManual) {
+                    alert("Update-Server konnte nicht erreicht werden. Stelle sicher, dass die version.json auf GitHub liegt.");
+                }
+            }
         }
 
         /* FEIERTAGE NRW */
@@ -669,9 +683,6 @@
         /* GEOFENCE & ADRESSSUCHE LOGIK */
         function loadGeoConfig() {
             if (document.getElementById('geoMode')) document.getElementById('geoMode').value = geoConfig.mode;
-            if (document.getElementById('geoActionEnter')) document.getElementById('geoActionEnter').value = geoConfig.actionEnter;
-            if (document.getElementById('geoActionLeave')) document.getElementById('geoActionLeave').value = geoConfig.actionLeave;
-            if (document.getElementById('geoInterval')) document.getElementById('geoInterval').value = geoConfig.interval;
             if (document.getElementById('geoLat')) document.getElementById('geoLat').value = geoConfig.lat || '';
             if (document.getElementById('geoLon')) document.getElementById('geoLon').value = geoConfig.lon || '';
             if (document.getElementById('geoRadius')) document.getElementById('geoRadius').value = geoConfig.radius || 300;
@@ -737,24 +748,18 @@
 
         function saveGeoConfig() {
             const mode = document.getElementById('geoMode').value;
-            const actionEnter = document.getElementById('geoActionEnter').value;
-            const actionLeave = document.getElementById('geoActionLeave').value;
-            const interval = document.getElementById('geoInterval').value;
             const lat = document.getElementById('geoLat').value.trim();
             const lon = document.getElementById('geoLon').value.trim();
             const radius = document.getElementById('geoRadius').value;
             const address = document.getElementById('geoAddressInput').value.trim();
 
             localStorage.setItem('horalog_geoMode', mode);
-            localStorage.setItem('horalog_geoActionEnter', actionEnter);
-            localStorage.setItem('horalog_geoActionLeave', actionLeave);
-            localStorage.setItem('horalog_geoInterval', interval);
             localStorage.setItem('horalog_geoLat', lat);
             localStorage.setItem('horalog_geoLon', lon);
             localStorage.setItem('horalog_geoRadius', radius);
             localStorage.setItem('horalog_geoAddress', address);
 
-            geoConfig = { mode, actionEnter, actionLeave, interval, lat, lon, radius, address };
+            geoConfig = { mode, lat, lon, radius, address };
             alert("📍 Standort-Einstellungen gespeichert!");
             setupCapacitorGeofence();
         }
@@ -953,7 +958,8 @@
         }
 
         function stamp(type) {
-            const key = getSelectedDateKey();
+            const todayStr = new Date().toISOString().split('T')[0];
+            const key = getSelectedDateKey() || todayStr;
             if (!timeEntries[key]) timeEntries[key] = {};
             const timeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
@@ -1225,6 +1231,82 @@
             reader.readAsText(file);
         }
 
+        /* LOCAL NOTIFICATIONS ACTIONS LOGIC */
+        async function registerLocalNotificationActionListeners() {
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                const LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
+                if (LocalNotifications) {
+                    try {
+                        await LocalNotifications.registerActionTypes({
+                            types: [
+                                {
+                                    id: 'GEOFENCE_LEAVE_TYPES',
+                                    actions: [
+                                        { id: 'ACT_PAUSE_START', title: '⏸️ Pause starten' },
+                                        { id: 'ACT_WORK_END', title: '🔴 Feierabend' }
+                                    ]
+                                },
+                                {
+                                    id: 'GEOFENCE_ENTER_TYPES',
+                                    actions: [
+                                        { id: 'ACT_PAUSE_END', title: '▶️ Pause beenden' },
+                                        { id: 'ACT_IGNORE', title: '⏳ Pause fortführen' }
+                                    ]
+                                }
+                            ]
+                        });
+
+                        LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
+                            const actionId = notification.actionId;
+                            if (actionId === 'ACT_PAUSE_START') stamp('pauseStart');
+                            if (actionId === 'ACT_WORK_END') stamp('end');
+                            if (actionId === 'ACT_PAUSE_END') stamp('pauseEnd');
+                        });
+                    } catch (e) {
+                        console.log("LocalNotifications Registration Error:", e);
+                    }
+                }
+            }
+        }
+
+        async function triggerLeaveNotification() {
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                const LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
+                if (LocalNotifications) {
+                    await LocalNotifications.schedule({
+                        notifications: [
+                            {
+                                title: "Arbeitsort verlassen 📍",
+                                body: "Möchtest du eine Pause einlegen oder hast du Feierabend?",
+                                id: 1001,
+                                actionTypeId: 'GEOFENCE_LEAVE_TYPES',
+                                schedule: { at: new Date(Date.now() + 1000) }
+                            }
+                        ]
+                    });
+                }
+            }
+        }
+
+        async function triggerEnterNotification() {
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                const LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
+                if (LocalNotifications) {
+                    await LocalNotifications.schedule({
+                        notifications: [
+                            {
+                                title: "Wieder am Arbeitsort 📍",
+                                body: "Deine Pause läuft noch. Möchtest du die Pause beenden?",
+                                id: 1002,
+                                actionTypeId: 'GEOFENCE_ENTER_TYPES',
+                                schedule: { at: new Date(Date.now() + 1000) }
+                            }
+                        ]
+                    });
+                }
+            }
+        }
+
         /* CAPACITOR BACKGROUND GEOLOCATION INTEGRATION */
         function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
             const R = 6371e3;
@@ -1258,17 +1340,39 @@
                             },
                             (location, error) => {
                                 if (error || !location) return;
+
+                                const todayKey = new Date().toISOString().split('T')[0];
+                                const dateObj = new Date(todayKey);
+                                const isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
+                                const holidayName = getNRWHolidayName(todayKey);
+                                const entry = timeEntries[todayKey] || {};
+
+                                // Schutz 1: Keinerlei Geofencing an arbeitsfreien Tagen oder bei Sonderkürzeln (U, K, FX)
+                                const isOffDay = isWeekend || holidayName || entry.code === 'U' || entry.code === 'K' || entry.code === 'FX';
+                                if (isOffDay) return;
+
                                 if (geoConfig.lat && geoConfig.lon) {
                                     const dist = calculateDistanceMeters(
                                         location.latitude, location.longitude,
                                         parseFloat(geoConfig.lat), parseFloat(geoConfig.lon)
                                     );
                                     const isInside = dist <= (parseInt(geoConfig.radius, 10) || 300);
+                                    
                                     if (lastGeoInside !== null && lastGeoInside !== isInside) {
+                                        const pauses = getNormalizedPauses(entry);
+                                        const hasOpenPause = pauses.length > 0 && pauses[pauses.length - 1].start && !pauses[pauses.length - 1].end;
+
                                         if (isInside) {
-                                            stamp(geoConfig.actionEnter || 'start');
+                                            if (!entry.start) {
+                                                stamp('start');
+                                            } else if (hasOpenPause) {
+                                                triggerEnterNotification();
+                                            }
                                         } else {
-                                            stamp(geoConfig.actionLeave || 'end');
+                                            // Schutz 2: Benachrichtigung nur senden, wenn Arbeit läuft und Pause nicht schon gestartet wurde
+                                            if (entry.start && !entry.end && !hasOpenPause) {
+                                                triggerLeaveNotification();
+                                            }
                                         }
                                     }
                                     lastGeoInside = isInside;
