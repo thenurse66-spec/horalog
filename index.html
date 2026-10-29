@@ -1,1724 +1,867 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HoraLog v9.19</title>
-    <meta name="theme-color" content="#1F497D">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="HoraLog">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>HoraLog v9.20 – Arbeitszeiterfassung</title>
 
-    <style>
-        :root {
-            --primary: #1F497D;
-            --primary-light: #2C5E9E;
-            --accent: #27AE60;
-            --danger: #C0392B;
-            --warning: #D35400;
-            --bg: #F4F6F9;
-            --card-bg: #FFFFFF;
-            --text: #2C3E50;
-            --border: #D0D7DE;
-        }
+  <!-- PWA Web App Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e293b">
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            padding-bottom: 75px;
-        }
+  <!-- pdfMake für lokalen PDF-Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
-        header {
-            background-color: var(--primary);
-            color: white;
-            padding: 8px 12px;
-            text-align: center;
-            font-size: 16px;
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 16px;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            border: 1px solid var(--border);
-            position: relative;
-        }
-
-        .card-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: var(--primary);
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .stamp-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .btn-stamp {
-            border: none;
-            border-radius: 10px;
-            padding: 14px 8px;
-            font-size: 14px;
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: transform 0.1s;
-        }
-
-        .btn-stamp:active { transform: scale(0.97); }
-
-        .btn-start { background-color: #27AE60; }
-        .btn-pause-start { background-color: #E67E22; }
-        .btn-end { background-color: #C0392B; }
-
-        .code-selector {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-        }
-
-        .code-btn {
-            flex: 1;
-            padding: 12px 6px;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            background: #F8F9FA;
-            font-weight: bold;
-            color: var(--text);
-            cursor: pointer;
-            text-align: center;
-            font-size: 13px;
-            transition: all 0.15s ease;
-        }
-
-        .code-btn.active {
-            background-color: var(--primary);
-            color: white;
-            border-color: var(--primary);
-            box-shadow: 0 2px 5px rgba(31,73,125,0.3);
-        }
-
-        .form-group {
-            margin-bottom: 14px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: #444;
-            margin-bottom: 5px;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 15px;
-            background: white;
-        }
-
-        nav {
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            height: 60px;
-            background: white;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            z-index: 100;
-        }
-
-        .nav-item {
-            flex: 1;
-            text-align: center;
-            color: #7F8C8D;
-            font-size: 11px;
-            text-decoration: none;
-            padding: 8px 0;
-            cursor: pointer;
-        }
-
-        .nav-item.active {
-            color: var(--primary);
-            font-weight: bold;
-        }
-
-        .nav-icon {
-            font-size: 20px;
-            display: block;
-            margin-bottom: 2px;
-        }
-
-        .hidden { display: none !important; }
-
-        .time-display {
-            font-size: 13px;
-            color: #555;
-            margin-top: 2px;
-        }
-
-        .action-btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-            text-align: center;
-            margin-top: 6px;
-        }
-
-        .btn-secondary { background-color: #6c757d; }
-        .btn-info { background-color: #2980B9; }
-
-        table.month-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-            margin-top: 10px;
-        }
-
-        table.month-table th, table.month-table td {
-            border: 1px solid var(--border);
-            padding: 6px 4px;
-            text-align: center;
-        }
-
-        table.month-table th {
-            background: var(--primary);
-            color: white;
-        }
-
-        .holiday-row {
-            background-color: #FDEDEC !important;
-            color: #922B21;
-        }
-
-        .holiday-tag {
-            font-size: 10px;
-            background: #E74C3C;
-            color: white;
-            padding: 2px 4px;
-            border-radius: 3px;
-            font-weight: bold;
-        }
-
-        .footer-note {
-            text-align: center;
-            font-size: 11px;
-            color: #888;
-            margin-top: 20px;
-        }
-
-        /* SYSTEM-PERMISSIONS MODAL */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            padding: 16px;
-        }
-
-        .modal-box {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            max-width: 480px;
-            width: 100%;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
-        .modal-header {
-            font-size: 18px;
-            font-weight: bold;
-            color: var(--primary);
-            margin-bottom: 12px;
-        }
-
-        .perm-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #EEE;
-        }
-
-        .perm-status {
-            font-size: 12px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-
-        .status-ok { background: #D4EDDA; color: #155724; }
-        .status-warn { background: #FFF3CD; color: #856404; }
-
-        /* TOUR HIGHLIGHT OVERLAY */
-        .tour-popover {
-            position: fixed;
-            background: #1F497D;
-            color: white;
-            padding: 16px;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            z-index: 2000;
-            max-width: 320px;
-            font-size: 13px;
-        }
-
-        .tour-popover-title {
-            font-weight: bold;
-            font-size: 15px;
-            margin-bottom: 6px;
-        }
-
-        .tour-nav {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 12px;
-            align-items: center;
-        }
-
-        .tour-btn {
-            background: #27AE60;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-    </style>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .no-select { user-select: none; -webkit-user-select: none; }
+  </style>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between pb-10">
 
-    <header>
-        <div>HoraLog — Arbeitszeiterfassung</div>
-        <div id="user-header-name" style="font-size: 13px; font-weight: normal; opacity: 0.9; margin-top: 2px;"></div>
-    </header>
-
-    <!-- BANNER FÜR FEHLENDE RECHTE -->
-    <div id="system-perm-banner" style="display: none; background: #FFF3CD; color: #856404; padding: 10px; text-align: center; font-size: 12px; border-bottom: 1px solid #FFEEBA;" onclick="checkSystemPermissions(true)">
-        ⚠️ System-Berechtigungen unvollständig! Tippe hier zur Behebung.
+  <!-- Header -->
+  <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-50 flex justify-between items-center shadow-lg">
+    <div>
+      <h1 class="text-xl font-bold text-indigo-400 tracking-wide">HoraLog</h1>
+      <p class="text-xs text-slate-400">v9.20 | Mobile Zeiterfassung</p>
     </div>
-
-    <div class="container">
-
-        <!-- TAB 1: STEMPELUHR -->
-        <div id="tab-today" class="tab-content">
-            <div class="card" id="tour-step-stamp">
-                <div class="card-title">
-                    <span>Erfassung & Stempeluhr</span>
-                    <input type="date" id="selected-date" class="form-control" style="width: auto; font-size: 13px;" onchange="loadDateData()">
-                </div>
-
-                <div id="holiday-info-banner" style="display: none; background: #FDEDEC; color: #922B21; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; margin-bottom: 12px; border: 1px solid #F5B7B1;">
-                    🎉 Feiertag in NRW: <span id="holiday-name-text"></span> (Sollzeit = 0:00 Std.)
-                </div>
-
-                <div class="stamp-grid">
-                    <button type="button" class="btn-stamp btn-start" onclick="stamp('start')">
-                        <span>🟢 Beginn</span>
-                        <span class="time-display" id="time-start">--:--</span>
-                    </button>
-                    <button type="button" class="btn-stamp btn-end" onclick="stamp('end')">
-                        <span>🔴 Ende</span>
-                        <span class="time-display" id="time-end">--:--</span>
-                    </button>
-                    <button type="button" class="btn-stamp btn-pause-start" id="btn-pause-toggle" onclick="togglePauseStamp()" style="grid-column: span 2;">
-                        <span id="lbl-pause-toggle">⏸️ Pause Starten</span>
-                        <span class="time-display" id="time-pause-summary">Keine aktive Pause</span>
-                    </button>
-                </div>
-
-                <div id="pauses-list-container" style="background: #F8F9FA; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 13px;">
-                    <div style="font-weight: bold; color: var(--primary); margin-bottom: 6px; display: flex; justify-content: space-between;">
-                        <span>Erfasste Pausen:</span>
-                        <span id="total-pause-display">0 Min.</span>
-                    </div>
-                    <div id="pauses-list"><i>Keine Pausen erfasst</i></div>
-                </div>
-
-                <button type="button" class="code-btn" style="width: 100%; background: #EBF5FB; color: var(--primary); margin-top: 6px;" onclick="toggleManualEdit()">
-                    ✏️ Zeiten manuell bearbeiten / nachtragen
-                </button>
-            </div>
-
-            <!-- MANUAL EDIT FORM WITH REASON MANDATE -->
-            <div id="manual-edit-card" class="card hidden" style="border-left: 4px solid var(--primary);">
-                <div class="card-title">Nachträgliche Korrektur</div>
-                
-                <div class="form-group">
-                    <label>Grund der manuellen Korrektur (Pflichtfeld)</label>
-                    <select id="edit-reason-select" class="form-control" onchange="toggleReasonCustom()">
-                        <option value="">-- Bitte Grund auswählen --</option>
-                        <option value="Arbeitsbeginn vergessen">Arbeitsbeginn vergessen / zu spät gestempelt</option>
-                        <option value="Arbeitsende vergessen">Arbeitsende vergessen / zu spät gestempelt</option>
-                        <option value="Pausenbeginn/-ende vergessen">Pausenbeginn oder -ende vergessen</option>
-                        <option value="Dienstgang / Auswärtstermin">Dienstgang / Auswärtstermin</option>
-                        <option value="Technisches Problem / Akku">Technisches Problem / Handy-Akku leer</option>
-                        <option value="Sonstiges">Sonstiges (Freitext)</option>
-                    </select>
-                </div>
-
-                <div class="form-group hidden" id="edit-reason-custom-group">
-                    <label>Erläuterung (Freitext)</label>
-                    <input type="text" id="edit-reason-custom" class="form-control" placeholder="Kurze Begründung eingeben...">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="form-group">
-                        <label>Arbeitsbeginn</label>
-                        <input type="time" id="edit-start" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label>Arbeitsende</label>
-                        <input type="time" id="edit-end" class="form-control">
-                    </div>
-                </div>
-                
-                <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
-                    <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <span>Pausenzeiten</span>
-                        <button type="button" onclick="addPauseInput()" style="background: var(--primary); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer;">+ Pause hinzufügen</button>
-                    </div>
-                    <div id="manual-pauses-edit-container"></div>
-                </div>
-
-                <button type="button" class="action-btn btn-start" style="margin-top: 12px;" onclick="saveManualEdit()">
-                    💾 Korrektur Speichern
-                </button>
-            </div>
-
-            <div class="card">
-                <div class="card-title">Tagesstatus & Kürzel</div>
-                <div class="code-selector">
-                    <button type="button" class="code-btn active" id="code-btn-norm" onclick="setCode('')">Normal</button>
-                    <button type="button" class="code-btn" id="code-btn-k" onclick="setCode('K')">Krank (K)</button>
-                    <button type="button" class="code-btn" id="code-btn-u" onclick="setCode('U')">Urlaub (U)</button>
-                    <button type="button" class="code-btn" id="code-btn-fx" onclick="setCode('FX')">Flexi (FX)</button>
-                </div>
-            </div>
-
-            <div class="card" id="tour-step-balance">
-                <div class="card-title">Tagesbilanz</div>
-                <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px;">
-                    <span>Soll-Arbeitszeit:</span>
-                    <strong id="day-target">08:00 Std.</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px;">
-                    <span>Ist-Arbeitszeit:</span>
-                    <strong id="day-actual">00:00 Std.</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; color: var(--primary);">
-                    <span>Tages-Saldo:</span>
-                    <span id="day-balance">0.0 Std.</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 2: MONATSÜBERSICHT -->
-        <div id="tab-month" class="tab-content hidden">
-            <div class="card" id="tour-step-month">
-                <div class="card-title">
-                    <div>
-                        <span>Monatsübersicht</span>
-                        <div id="month-user-name" style="font-size: 12px; font-weight: normal; color: #555;"></div>
-                    </div>
-                    <input type="month" id="month-picker" class="form-control" style="width: auto; font-size: 13px;" onchange="renderMonthTable()">
-                </div>
-
-                <div style="background: #F8F9FA; padding: 10px; border-radius: 8px; margin-bottom: 12px; font-size: 13px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                        <span>Übertrag aus Vormonaten:</span> <strong id="month-prev-carryover">0.0 Std.</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                        <span>Monatssumme IST:</span> <strong id="month-sum-actual">00:00 Std.</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                        <span>Monatssumme SOLL:</span> <strong id="month-sum-target">00:00 Std.</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:4px;">
-                        <span>Monatssaldo (aktueller Monat):</span> <strong id="month-sum-balance">0.0 Std.</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--primary); border-top: 1px dashed #CCC; padding-top: 4px; margin-top: 4px;">
-                        <span>Gesamtsaldo (inkl. Übertrag):</span> <strong id="month-total-accumulated">0.0 Std.</strong>
-                    </div>
-                </div>
-
-                <div style="max-height: 280px; overflow-y: auto;">
-                    <table class="month-table">
-                        <thead>
-                            <tr>
-                                <th>Datum</th>
-                                <th>Beginn</th>
-                                <th>Pause</th>
-                                <th>Ende</th>
-                                <th>Code</th>
-                                <th>Ist</th>
-                            </tr>
-                        </thead>
-                        <tbody id="month-table-body"></tbody>
-                    </table>
-                </div>
-
-                <button type="button" class="action-btn btn-start" style="margin-top: 14px;" onclick="exportPDF()">
-                    📧 Monatsbericht als PDF / E-Mail versenden
-                </button>
-            </div>
-        </div>
-
-        <!-- TAB 3: VORGABEN, STANDORT & DATENSICHERUNG -->
-        <div id="tab-settings" class="tab-content hidden">
-            <div class="card" id="tour-step-settings">
-                <div class="card-title">Arbeitszeitmodell & Vorgaben</div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="form-group">
-                        <label>Vorname</label>
-                        <input type="text" id="cfg-first-name" class="form-control" placeholder="Vorname" oninput="updateHeaderName()">
-                    </div>
-                    <div class="form-group">
-                        <label>Nachname</label>
-                        <input type="text" id="cfg-last-name" class="form-control" placeholder="Nachname" oninput="updateHeaderName()">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Arbeitstage pro Woche</label>
-                    <input type="number" id="cfg-days-week" class="form-control" value="5" min="1" max="7">
-                </div>
-                <div class="form-group">
-                    <label>Soll-Arbeitszeit pro Tag (hh:mm)</label>
-                    <input type="time" id="cfg-target-hours" class="form-control" value="08:00">
-                </div>
-                <div class="form-group">
-                    <label>Jahresurlaubsanspruch (Tage)</label>
-                    <input type="number" id="cfg-vacation-claim" class="form-control" value="30">
-                </div>
-                <div class="form-group">
-                    <label>Resturlaub aus Vorjahr (Tage)</label>
-                    <input type="number" id="cfg-vacation-prev" class="form-control" value="0">
-                </div>
-                <button type="button" class="action-btn btn-start" onclick="saveConfig()">
-                    💾 Vorgaben Speichern
-                </button>
-            </div>
-
-            <!-- GEOFENCE & STANDORT-EINSTELLUNGEN -->
-            <div class="card" id="tour-step-geo">
-                <div class="card-title">📍 Standort & Geofencing</div>
-                
-                <div class="form-group">
-                    <label>Modus der Standortbestimmung</label>
-                    <select id="geoMode" class="form-control" onchange="toggleGeoModeUI()">
-                        <option value="disabled">Inaktiv (GPS ausgeschaltet)</option>
-                        <option value="background">Aktiv (Hintergrund-Geofencing mit Benachrichtigung)</option>
-                    </select>
-                </div>
-
-                <div id="geo-settings-details">
-                    <div class="form-group">
-                        <label>Arbeitsadresse</label>
-                        <input type="text" id="geoAddressInput" class="form-control" placeholder="z. B. Hohestraße 1, Köln">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
-                            <button type="button" class="action-btn btn-info" style="margin-top:0; font-size:12px;" onclick="searchAddressApi()">🔍 Adresse suchen</button>
-                            <button type="button" class="action-btn btn-secondary" style="margin-top:0; font-size:12px;" onclick="useCurrentPosition()">🎯 GPS-Pos. nutzen</button>
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
-                        <div class="form-group">
-                            <label>Breitengrad (Lat)</label>
-                            <input type="text" id="geoLat" class="form-control" placeholder="50.9375">
-                        </div>
-                        <div class="form-group">
-                            <label>Längengrad (Lon)</label>
-                            <input type="text" id="geoLon" class="form-control" placeholder="6.9603">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Geofence Radius (Meter)</label>
-                        <input type="number" id="geoRadius" class="form-control" value="300">
-                    </div>
-
-                    <div style="background: #EBF5FB; padding: 10px; border-radius: 8px; margin-top: 10px; border: 1px solid #AED6F1;">
-                        <button type="button" class="action-btn btn-info" style="margin-top:0;" onclick="testPushNotification()">
-                            🔔 Test-Benachrichtigung senden
-                        </button>
-                        <div id="geo-debug-status" style="font-size: 11px; color: #555; margin-top: 6px; text-align: center;">Status: Noch keine Standortabfrage ausgeführt</div>
-                    </div>
-                </div>
-
-                <button type="button" class="action-btn btn-start" style="margin-top:10px;" onclick="saveGeoConfig()">
-                    📍 Standort-Einstellungen Speichern
-                </button>
-            </div>
-
-            <!-- SYSTEM & HILFE -->
-            <div class="card">
-                <div class="card-title">Hilfe & System-Status</div>
-                <button type="button" class="action-btn btn-info" style="margin-bottom: 10px;" onclick="startInteractiveTour(true)">
-                    ❓ Kurze Einführung / Tour erneut starten
-                </button>
-                <button type="button" class="action-btn btn-secondary" style="margin-bottom: 10px;" onclick="checkSystemPermissions(true)">
-                    🛠️ System-Berechtigungen erneut prüfen
-                </button>
-            </div>
-
-            <!-- DATEN-SICHERUNG & UPDATES -->
-            <div class="card">
-                <div class="card-title">System, Daten & Updates</div>
-                <p style="font-size: 13px; color: #666; margin-bottom: 12px;">Aktuelle Version: <strong>v9.19</strong></p>
-                
-                <button type="button" class="action-btn btn-info" style="margin-bottom: 10px;" onclick="checkForUpdates(true)">
-                    🔄 Manuell nach Updates suchen
-                </button>
-
-                <button type="button" class="action-btn btn-secondary" onclick="exportHoraLogData()">
-                    📤 Daten als JSON-Datei exportieren
-                </button>
-                
-                <div style="margin-top: 14px;">
-                    <label for="importFile" style="display:block; font-size:13px; font-weight:bold; margin-bottom: 6px;">📥 Daten importieren (.json):</label>
-                    <input type="file" id="importFile" class="form-control" accept=".json" onchange="importHoraLogData(event)">
-                </div>
-            </div>
-        </div>
-
-        <div class="footer-note">
-            HoraLog v9.19 — Copyright © by Holger Fritsch — Alle Rechte vorbehalten.
-        </div>
-
+    <div id="statusBadge" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-700 text-slate-300">
+      Bereit
     </div>
+  </header>
 
-    <!-- NAVIGATION -->
-    <nav>
-        <div class="nav-item active" id="nav-today" onclick="switchTab('today')">
-            <span class="nav-icon">⏱️</span>
-            <span>Zeiten</span>
+  <!-- Hauptinhalt -->
+  <main class="p-4 max-w-md mx-auto w-full space-y-6">
+
+    <!-- Datumswähler & Tagesübersicht -->
+    <section class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md">
+      <div class="flex justify-between items-center mb-3">
+        <button id="btnPrevDay" class="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200">◀</button>
+        <div class="text-center">
+          <input type="date" id="datePicker" class="bg-slate-900 text-indigo-300 font-bold px-3 py-1 rounded border border-slate-700 text-center cursor-pointer">
+          <p id="dayOfWeekLabel" class="text-xs text-slate-400 mt-1">-</p>
         </div>
-        <div class="nav-item" id="nav-month" onclick="switchTab('month')">
-            <span class="nav-icon">📅</span>
-            <span>Monat</span>
+        <button id="btnNextDay" class="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200">▶</button>
+      </div>
+
+      <!-- Zeit-Statistiken -->
+      <div class="grid grid-cols-3 gap-2 text-center my-4">
+        <div class="bg-slate-900 p-2 rounded-lg border border-slate-700/50">
+          <span class="text-xs text-slate-400 block">Soll</span>
+          <span id="targetHoursDisplay" class="text-base font-semibold text-slate-200">0:00 h</span>
         </div>
-        <div class="nav-item" id="nav-settings" onclick="switchTab('settings')">
-            <span class="nav-icon">⚙️</span>
-            <span>Vorgaben</span>
+        <div class="bg-slate-900 p-2 rounded-lg border border-slate-700/50">
+          <span class="text-xs text-slate-400 block">Ist (Netto)</span>
+          <span id="workHoursDisplay" class="text-base font-semibold text-emerald-400">0:00 h</span>
         </div>
-    </nav>
-
-    <!-- MODAL FÜR PERMISSIONS CHECK -->
-    <div id="perm-modal" class="modal-overlay hidden">
-        <div class="modal-box">
-            <div class="modal-header">📱 System-Berechtigungen</div>
-            <p style="font-size: 13px; color: #555; margin-bottom: 14px;">Für das automatische Geofencing und Benachrichtigungen benötigt HoraLog folgende Freigaben:</p>
-            
-            <div class="perm-item">
-                <span>📍 GPS Standort ("Immer zulassen")</span>
-                <span id="perm-status-gps" class="perm-status status-warn">Prüfe...</span>
-            </div>
-            <div class="perm-item">
-                <span>🔋 Akku-Optimierung aus</span>
-                <span id="perm-status-battery" class="perm-status status-warn">Prüfe...</span>
-            </div>
-            <div class="perm-item">
-                <span>🔔 Push-Benachrichtigungen</span>
-                <span id="perm-status-notif" class="perm-status status-warn">Prüfe...</span>
-            </div>
-
-            <button type="button" class="action-btn btn-start" style="margin-top: 16px;" onclick="closePermModal()">Verstanden & Schließen</button>
+        <div class="bg-slate-900 p-2 rounded-lg border border-slate-700/50">
+          <span class="text-xs text-slate-400 block">Saldo</span>
+          <span id="balanceDisplay" class="text-base font-semibold text-slate-200">0:00 h</span>
         </div>
-    </div>
+      </div>
 
-    <!-- POPOVER FÜR INTERAKTIVE TOUR -->
-    <div id="tour-popover" class="tour-popover hidden">
-        <div id="tour-title" class="tour-popover-title">Tour</div>
-        <div id="tour-body">Inhalt...</div>
-        <div class="tour-nav">
-            <span id="tour-step-num" style="font-size: 11px; opacity: 0.8;">Schritt 1/5</span>
-            <div>
-                <button type="button" onclick="endTour()" style="background:none; border:none; color:white; margin-right:8px; cursor:pointer;">Abbrechen</button>
-                <button type="button" class="tour-btn" id="tour-next-btn" onclick="nextTourStep()">Weiter ▶</button>
-            </div>
+      <!-- Stempel-Aktionsbuttons -->
+      <div class="grid grid-cols-2 gap-3 mt-4">
+        <button id="btnStampStart" onclick="manualStamp('start')" class="py-3 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-lg text-white shadow">
+          Kommt
+        </button>
+        <button id="btnStampEnd" onclick="manualStamp('end')" class="py-3 bg-rose-600 hover:bg-rose-500 font-bold rounded-lg text-white shadow">
+          Geht
+        </button>
+        <button id="btnStampPauseStart" onclick="manualStamp('pause_start')" class="py-2 bg-amber-600 hover:bg-amber-500 text-sm font-medium rounded-lg text-white">
+          Pause Start
+        </button>
+        <button id="btnStampPauseEnd" onclick="manualStamp('pause_end')" class="py-2 bg-amber-700 hover:bg-amber-600 text-sm font-medium rounded-lg text-white">
+          Pause Ende
+        </button>
+      </div>
+    </section>
+
+    <!-- Tages-Protokoll & Ereignisse -->
+    <section class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md">
+      <h2 class="text-sm font-bold text-slate-300 mb-2 uppercase tracking-wider">Tagesprotokoll</h2>
+      <div id="logEntriesContainer" class="space-y-2 text-sm text-slate-300">
+        <p class="text-xs text-slate-500 italic">Keine Einträge für diesen Tag.</p>
+      </div>
+    </section>
+
+    <!-- Monatsbericht & Export -->
+    <section class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md space-y-3">
+      <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider">Berichte & Export</h2>
+      <div class="flex gap-2">
+        <button onclick="generatePDFReport()" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm font-bold rounded-lg text-white">
+          📄 PDF Monatsbericht
+        </button>
+        <button onclick="exportJSONBackup()" class="py-2 px-3 bg-slate-700 hover:bg-slate-600 text-xs font-medium rounded-lg text-slate-200">
+          💾 Backup
+        </button>
+        <label class="py-2 px-3 bg-slate-700 hover:bg-slate-600 text-xs font-medium rounded-lg text-slate-200 cursor-pointer">
+          📥 Import
+          <input type="file" id="importFileInput" onchange="importJSONBackup(event)" class="hidden" accept=".json">
+        </label>
+      </div>
+    </section>
+
+    <!-- Geofencing & Einstellungen -->
+    <section class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md space-y-4">
+      <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider">Geofencing & System</h2>
+      
+      <div class="flex items-center justify-between">
+        <span class="text-sm text-slate-300">Geofencing aktivieren</span>
+        <input type="checkbox" id="geoEnableToggle" onchange="saveSettings()" class="w-5 h-5 accent-indigo-500 cursor-pointer">
+      </div>
+
+      <div class="space-y-2 text-xs">
+        <label class="block text-slate-400">Arbeitsort Koordinaten (Lat, Lng):</label>
+        <div class="flex gap-2">
+          <input type="number" step="any" id="geoLatInput" placeholder="Breitengrad" class="w-1/2 p-2 bg-slate-900 border border-slate-700 rounded text-slate-200">
+          <input type="number" step="any" id="geoLngInput" placeholder="Längengrad" class="w-1/2 p-2 bg-slate-900 border border-slate-700 rounded text-slate-200">
         </div>
-    </div>
+        <button onclick="setCurrentLocationAsWorkplace()" class="w-full py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-300 text-xs">
+          📍 Aktuellen Standort übernehmen
+        </button>
+      </div>
 
-    <script>
-        const CURRENT_VERSION = "9.19";
-        const UPDATE_CHECK_URL = "https://raw.githubusercontent.com/thenurse66-spec/horalog-updates/main/version.json"; 
+      <div class="space-y-1 text-xs">
+        <label class="block text-slate-400">Radius (Meter):</label>
+        <input type="number" id="geoRadiusInput" value="100" class="w-full p-2 bg-slate-900 border border-slate-700 rounded text-slate-200">
+      </div>
 
-        let config = JSON.parse(localStorage.getItem('horalog_config')) || null;
-        let timeEntries = JSON.parse(localStorage.getItem('horalog_entries')) || {};
-        let geoConfig = {
-            mode: localStorage.getItem('horalog_geoMode') || 'disabled',
-            lat: localStorage.getItem('horalog_geoLat') || null,
-            lon: localStorage.getItem('horalog_geoLon') || null,
-            radius: localStorage.getItem('horalog_geoRadius') || 300,
-            address: localStorage.getItem('horalog_geoAddress') || ''
-        };
-        let lastGeoInside = null;
-        let currentTourStep = 0;
+      <!-- Konfigurierbare Arbeitstage -->
+      <div class="space-y-1 text-xs">
+        <label class="block text-slate-400 font-semibold mb-1">Reguläre Arbeitstage:</label>
+        <div class="grid grid-cols-7 gap-1 text-center">
+          <label class="p-1 bg-slate-900 rounded border border-slate-700 block cursor-pointer">
+            <span class="block text-[10px]">Mo</span>
+            <input type="checkbox" id="workDayMo" checked onchange="saveSettings()" class="accent-indigo-500">
+          </label>
+          <label class="p-1 bg-slate-900 rounded border border-slate-700 block cursor-pointer">
+            <span class="block text-[10px]">Di</span>
+            <input type="checkbox" id="workDayDi" checked onchange="saveSettings()" class="accent-indigo-500">
+          </label>
+          <label class="p-1 bg-slate-900 rounded border border-slate-700 block cursor-pointer">
+            <span class="block text-[10px]">Mi</span>
+            <input type="checkbox" id="workDayMi" checked onchange="saveSettings()" class="accent-indigo-500">
+          </label>
+          <label class="p-1 bg-slate-900 rounded border border-slate-700 block cursor-pointer">
+            <span class="block text-[10px]">Do</span>
+            <input type="checkbox" id="workDayDo" checked onchange="saveSettings()" class="accent-indigo-500">
+          </label>
+          <label class="p-1 bg-slate-900 rounded border border-slate-700 block cursor-pointer">
+            <span class="block text-[10px]">Fr</span>
+            <input type="checkbox" id="workDayFr" checked onchange="saveSettings()" class="accent-indigo-500">
+          </label>
+          <label class="p-1 bg-slate-900 rounded border border-slate-700 block cursor-pointer">
+            <span class="block text-[10px]">Sa</span>
+            <input type="checkbox" id="workDaySa" onchange="saveSettings()" class="accent-indigo-500">
+          </label>
+          <label class="p-1 bg-slate-900 rounded border border-slate-700 block cursor-pointer">
+            <span class="block text-[10px]">So</span>
+            <input type="checkbox" id="workDaySo" onchange="saveSettings()" class="accent-indigo-500">
+          </label>
+        </div>
+      </div>
 
-        function initApp() {
-            const todayStr = new Date().toISOString().split('T')[0];
-            document.getElementById('selected-date').value = todayStr;
-            document.getElementById('month-picker').value = todayStr.substring(0, 7);
+      <!-- Geofence Live Diagnose-Monitor -->
+      <div class="bg-slate-900 p-3 rounded-lg border border-slate-700 text-xs space-y-1">
+        <div class="flex justify-between text-slate-400 font-mono">
+          <span>Plugin Status:</span>
+          <span id="diagPluginStatus" class="text-amber-400">Inaktiv</span>
+        </div>
+        <div class="flex justify-between text-slate-400 font-mono">
+          <span>Letzte Distanz:</span>
+          <span id="diagDistance" class="text-slate-200">-</span>
+        </div>
+        <div class="flex justify-between text-slate-400 font-mono">
+          <span>Status innerhalb:</span>
+          <span id="diagIsInside" class="text-slate-200">-</span>
+        </div>
+        <div class="flex justify-between text-slate-400 font-mono">
+          <span>Letzter Fix:</span>
+          <span id="diagLastFix" class="text-slate-200">-</span>
+        </div>
+        <div class="mt-2 pt-2 border-t border-slate-800 text-[10px] font-mono text-slate-500 overflow-x-auto max-h-20" id="diagLogs">
+          Keine Systemmeldungen.
+        </div>
+      </div>
 
-            loadConfig();
-            loadGeoConfig();
-            loadDateData();
-            registerLocalNotificationActionListeners();
-            setupCapacitorGeofence();
-            
-            // System-Check & Onboarding-Start
-            setTimeout(() => {
-                checkSystemPermissions(false);
-                checkOnboardingStatus();
-                checkForUpdates(false);
-            }, 1000);
+      <button onclick="saveSettings()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-sm font-bold rounded-lg text-white">
+        Einstellungen Speichern
+      </button>
+    </section>
+
+  </main>
+
+  <!-- Hauptskript -->
+  <script>
+    // ==========================================
+    // 1. ZENTRALE HILFSFUNKTIONEN (LOKALES DATUM)
+    // ==========================================
+
+    /**
+     * Erzeugt einen Date-Key "YYYY-MM-DD" basierend auf lokaler Zeit.
+     * VERMEIDET toISOString() UTC-Verschiebungsfehler nachts!
+     */
+    function getLocalDateString(d = new Date()) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    /**
+     * Formatiert ZeitHH:MM aus einem Date-Objekt
+     */
+    function getLocalTimeString(d = new Date()) {
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+
+    /**
+     * Sicherer HTML-Escape-Schutz (XSS Protection)
+     */
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    /**
+     * SemVer-Versionsvergleich
+     */
+    function compareVersions(v1, v2) {
+      const p1 = v1.split('.').map(Number);
+      const p2 = v2.split('.').map(Number);
+      for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+        const val1 = p1[i] || 0;
+        const val2 = p2[i] || 0;
+        if (val1 > val2) return 1;
+        if (val1 < val2) return -1;
+      }
+      return 0;
+    }
+
+    // ==========================================
+    // 2. ZEITZONE & NRW FEIERTAGSBERECHNUNG
+    // ==========================================
+
+    function getEasterSunday(year) {
+      const a = year % 19;
+      const b = Math.floor(year / 100);
+      const c = year % 100;
+      const d = Math.floor(b / 4);
+      const e = b % 4;
+      const f = Math.floor((b + 8) / 25);
+      const g = Math.floor((b - f + 1) / 3);
+      const h = (19 * a + b - d - g + 15) % 30;
+      const i = Math.floor(c / 4);
+      const k = c % 4;
+      const l = (32 + 2 * e + 2 * i - h - k) % 7;
+      const m = Math.floor((a + 11 * h + 22 * l) / 451);
+      const month = Math.floor((h + l - 7 * m + 114) / 31);
+      const day = ((h + l - 7 * m + 114) % 31) + 1;
+      return new Date(year, month - 1, day);
+    }
+
+    function getNRWHolidays(year) {
+      const holidays = {};
+      
+      // Feste Feiertage
+      holidays[`${year}-01-01`] = "Neujahr";
+      holidays[`${year}-05-01`] = "Tag der Arbeit";
+      holidays[`${year}-10-03`] = "Tag der Deutschen Einheit";
+      holidays[`${year}-11-01`] = "Allerheiligen";
+      holidays[`${year}-12-25`] = "1. Weihnachtstag";
+      holidays[`${year}-12-26`] = "2. Weihnachtstag";
+
+      // Bewegliche Feiertage (berechnet ohne UTC-toISOString Konvertierung)
+      const easter = getEasterSunday(year);
+
+      const addDays = (baseDate, days) => {
+        const res = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+        res.setDate(res.getDate() + days);
+        return getLocalDateString(res);
+      };
+
+      holidays[addDays(easter, -2)] = "Karfreitag";
+      holidays[addDays(easter, 1)]  = "Ostermontag";
+      holidays[addDays(easter, 39)] = "Christi Himmelfahrt";
+      holidays[addDays(easter, 50)] = "Pfingstmontag";
+      holidays[addDays(easter, 60)] = "Fronleichnam";
+
+      return holidays;
+    }
+
+    // ==========================================
+    // 3. ANWENDUNGS-ZUSTAND & INITIALISIERUNG
+    // ==========================================
+
+    let selectedDateKey = getLocalDateString();
+    let appSettings = {
+      geoEnabled: false,
+      workLat: null,
+      workLng: null,
+      radius: 100,
+      targetHoursPerDay: 8.0,
+      workDays: [true, true, true, true, true, false, false] // Mo-So
+    };
+
+    let activeWatcherId = null;
+    let lastGeoInside = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
+      initDatePicker();
+      renderDayView();
+      initCapacitorBackgroundGeo();
+      registerPWA();
+      logDiag("App v9.20 gestartet.");
+    });
+
+    function initDatePicker() {
+      const dp = document.getElementById('datePicker');
+      dp.value = selectedDateKey;
+      dp.addEventListener('change', (e) => {
+        if (e.target.value) {
+          selectedDateKey = e.target.value;
+          renderDayView();
+        }
+      });
+
+      document.getElementById('btnPrevDay').addEventListener('click', () => {
+        const d = new Date(selectedDateKey + "T12:00:00");
+        d.setDate(d.getDate() - 1);
+        selectedDateKey = getLocalDateString(d);
+        dp.value = selectedDateKey;
+        renderDayView();
+      });
+
+      document.getElementById('btnNextDay').addEventListener('click', () => {
+        const d = new Date(selectedDateKey + "T12:00:00");
+        d.setDate(d.getDate() + 1);
+        selectedDateKey = getLocalDateString(d);
+        dp.value = selectedDateKey;
+        renderDayView();
+      });
+    }
+
+    // ==========================================
+    // 4. EINSTELLUNGEN & SPEICHER-BEHANDLUNG
+    // ==========================================
+
+    function loadSettings() {
+      const stored = localStorage.getItem('horalog_settings');
+      if (stored) {
+        try {
+          appSettings = { ...appSettings, ...JSON.parse(stored) };
+        } catch (e) {
+          console.error("Fehler beim Laden der Einstellungen", e);
+        }
+      }
+
+      document.getElementById('geoEnableToggle').checked = !!appSettings.geoEnabled;
+      document.getElementById('geoLatInput').value = appSettings.workLat || '';
+      document.getElementById('geoLngInput').value = appSettings.workLng || '';
+      document.getElementById('geoRadiusInput').value = appSettings.radius || 100;
+
+      if (appSettings.workDays) {
+        document.getElementById('workDayMo').checked = !!appSettings.workDays[0];
+        document.getElementById('workDayDi').checked = !!appSettings.workDays[1];
+        document.getElementById('workDayMi').checked = !!appSettings.workDays[2];
+        document.getElementById('workDayDo').checked = !!appSettings.workDays[3];
+        document.getElementById('workDayFr').checked = !!appSettings.workDays[4];
+        document.getElementById('workDaySa').checked = !!appSettings.workDays[5];
+        document.getElementById('workDaySo').checked = !!appSettings.workDays[6];
+      }
+    }
+
+    function saveSettings() {
+      appSettings.geoEnabled = document.getElementById('geoEnableToggle').checked;
+      appSettings.workLat = parseFloat(document.getElementById('geoLatInput').value) || null;
+      appSettings.workLng = parseFloat(document.getElementById('geoLngInput').value) || null;
+      appSettings.radius = parseInt(document.getElementById('geoRadiusInput').value) || 100;
+
+      appSettings.workDays = [
+        document.getElementById('workDayMo').checked,
+        document.getElementById('workDayDi').checked,
+        document.getElementById('workDayMi').checked,
+        document.getElementById('workDayDo').checked,
+        document.getElementById('workDayFr').checked,
+        document.getElementById('workDaySa').checked,
+        document.getElementById('workDaySo').checked
+      ];
+
+      localStorage.setItem('horalog_settings', JSON.stringify(appSettings));
+      logDiag("Einstellungen gespeichert.");
+
+      // Watcher neu starten mit aktualisierten Daten
+      initCapacitorBackgroundGeo();
+      renderDayView();
+    }
+
+    // ==========================================
+    // 5. ZEITERFASSUNGS-KERN & STEMPELN
+    // ==========================================
+
+    function getDayData(dateKey) {
+      const stored = localStorage.getItem(`horalog_day_${dateKey}`);
+      if (stored) {
+        try { return JSON.parse(stored); } catch (e) {}
+      }
+      return { events: [], notes: '' };
+    }
+
+    function saveDayData(dateKey, data) {
+      localStorage.setItem(`horalog_day_${dateKey}`, JSON.stringify(data));
+    }
+
+    /**
+     * Zentrale Stempelfunktion mit explizitem Zieldatum!
+     * Entkoppelt UI-Auswahl von Hintergrund-Ereignissen.
+     */
+    function stamp(type, targetDateKey = null) {
+      const dateKey = targetDateKey || selectedDateKey;
+      const dayData = getDayData(dateKey);
+      const now = new Date();
+      
+      const newEvent = {
+        id: Date.now(),
+        type: type, // 'start', 'end', 'pause_start', 'pause_end'
+        time: getLocalTimeString(now),
+        timestamp: now.getTime()
+      };
+
+      dayData.events.push(newEvent);
+      saveDayData(dateKey, dayData);
+
+      logDiag(`Stempel gesetzt: ${type} am ${dateKey} um ${newEvent.time}`);
+
+      if (dateKey === selectedDateKey) {
+        renderDayView();
+      }
+    }
+
+    function manualStamp(type) {
+      stamp(type, selectedDateKey);
+    }
+
+    // ==========================================
+    // 6. TAGENANSICHT & ERGEBNIS-BERECHNUNG
+    // ==========================================
+
+    function renderDayView() {
+      const dateObj = new Date(selectedDateKey + "T12:00:00");
+      const dayOfWeek = dateObj.getDay(); // 0 = So, 1 = Mo ...
+      const dayNames = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+      
+      // Feiertags-Check
+      const holidays = getNRWHolidays(dateObj.getFullYear());
+      const isHoliday = holidays[selectedDateKey];
+
+      document.getElementById('dayOfWeekLabel').textContent = isHoliday 
+        ? `${dayNames[dayOfWeek]} (${isHoliday})` 
+        : dayNames[dayOfWeek];
+
+      const dayData = getDayData(selectedDateKey);
+      const container = document.getElementById('logEntriesContainer');
+      container.innerHTML = '';
+
+      if (!dayData.events || dayData.events.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic">Keine Einträge für diesen Tag.</p>`;
+      } else {
+        dayData.events.forEach(ev => {
+          const div = document.createElement('div');
+          div.className = "flex justify-between items-center bg-slate-900 p-2 rounded border border-slate-700/50";
+          
+          let typeLabel = ev.type;
+          let colorClass = "text-slate-300";
+          if (ev.type === 'start') { typeLabel = "Kommt"; colorClass = "text-emerald-400 font-bold"; }
+          if (ev.type === 'end') { typeLabel = "Geht"; colorClass = "text-rose-400 font-bold"; }
+          if (ev.type === 'pause_start') { typeLabel = "Pause Beginn"; colorClass = "text-amber-400"; }
+          if (ev.type === 'pause_end') { typeLabel = "Pause Ende"; colorClass = "text-amber-300"; }
+
+          div.innerHTML = `
+            <span class="${colorClass}">${escapeHTML(typeLabel)}</span>
+            <span class="font-mono text-xs text-slate-400">${escapeHTML(ev.time)}</span>
+          `;
+          container.appendChild(div);
+        });
+      }
+
+      // Berechnungen
+      // Regeltagsindex (0=Mo..6=So)
+      const dayIndex = (dayOfWeek + 6) % 7; 
+      const isWorkday = appSettings.workDays[dayIndex] && !isHoliday;
+      
+      const targetHours = isWorkday ? appSettings.targetHoursPerDay : 0.0;
+      const netWorkMinutes = calculateNetWorkMinutes(dayData.events);
+      const netHours = netWorkMinutes / 60.0;
+      const balanceHours = netHours - targetHours;
+
+      document.getElementById('targetHoursDisplay').textContent = formatHours(targetHours);
+      document.getElementById('workHoursDisplay').textContent = formatHours(netHours);
+      
+      const balDisp = document.getElementById('balanceDisplay');
+      balDisp.textContent = (balanceHours >= 0 ? "+" : "") + formatHours(balanceHours);
+      balDisp.className = `text-base font-semibold ${balanceHours >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+    }
+
+    function calculateNetWorkMinutes(events) {
+      if (!events || events.length === 0) return 0;
+      
+      let totalMinutes = 0;
+      let lastStart = null;
+      let pauseStart = null;
+      let totalPauseMinutes = 0;
+
+      events.forEach(ev => {
+        const [h, m] = ev.time.split(':').map(Number);
+        const mins = h * 60 + m;
+
+        if (ev.type === 'start') {
+          lastStart = mins;
+        } else if (ev.type === 'end' && lastStart !== null) {
+          totalMinutes += (mins - lastStart);
+          lastStart = null;
+        } else if (ev.type === 'pause_start') {
+          pauseStart = mins;
+        } else if (ev.type === 'pause_end' && pauseStart !== null) {
+          totalPauseMinutes += (mins - pauseStart);
+          pauseStart = null;
+        }
+      });
+
+      return Math.max(0, totalMinutes - totalPauseMinutes);
+    }
+
+    function formatHours(decimalHours) {
+      const sign = decimalHours < 0 ? "-" : "";
+      const absMins = Math.round(Math.abs(decimalHours) * 60);
+      const h = Math.floor(absMins / 60);
+      const m = absMins % 60;
+      return `${sign}${h}:${String(m).padStart(2, '0')} h`;
+    }
+
+    // ==========================================
+    // 7. GEOFENCING & CAPACITOR BACKGROUND LOGIK
+    // ==========================================
+
+    function logDiag(msg) {
+      console.log("[HoraLog Diag]", msg);
+      const container = document.getElementById('diagLogs');
+      if (container) {
+        const timeStr = getLocalTimeString();
+        container.innerHTML = `[${timeStr}] ${escapeHTML(msg)}<br>` + container.innerHTML;
+      }
+    }
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371e3; // Meter
+      const φ1 = lat1 * Math.PI / 180;
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+      const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    async function initCapacitorBackgroundGeo() {
+      const statusElem = document.getElementById('diagPluginStatus');
+
+      if (!appSettings.geoEnabled) {
+        statusElem.textContent = "Deaktiviert";
+        statusElem.className = "text-slate-400";
+        if (activeWatcherId && window.CapacitorBackgroundGeolocation) {
+          window.CapacitorBackgroundGeolocation.removeWatcher({ id: activeWatcherId });
+          activeWatcherId = null;
+        }
+        return;
+      }
+
+      if (!appSettings.workLat || !appSettings.workLng) {
+        statusElem.textContent = "Fehlende Koordinaten";
+        statusElem.className = "text-rose-400";
+        return;
+      }
+
+      // Registrierung der Push-Notification-Buttons beim Start
+      if (window.CapacitorLocalNotifications) {
+        try {
+          await window.CapacitorLocalNotifications.registerActionTypes({
+            types: [
+              {
+                id: 'GEOFENCE_LEAVE_TYPES',
+                actions: [
+                  { id: 'ACT_PAUSE_START', title: 'Pause beginnen' },
+                  { id: 'ACT_WORK_END', title: 'Feierabend' }
+                ]
+              }
+            ]
+          });
+
+          window.CapacitorLocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
+            const actionId = notification.actionId;
+            const todayKey = getLocalDateString();
+            if (actionId === 'ACT_PAUSE_START') {
+              stamp('pause_start', todayKey);
+            } else if (actionId === 'ACT_WORK_END') {
+              stamp('end', todayKey);
+            }
+          });
+        } catch (e) {
+          logDiag("Fehler bei Notification-Action-Registrierung: " + e.message);
+        }
+      }
+
+      // Geolocation Watcher starten
+      if (navigator.geolocation) {
+        statusElem.textContent = "Aktiv (Web/Capacitor)";
+        statusElem.className = "text-emerald-400";
+
+        if (activeWatcherId !== null) {
+          navigator.geolocation.clearWatch(activeWatcherId);
         }
 
-        /* AUTO-UPDATE LOGIK */
-        async function checkForUpdates(isManual = false) {
-            if (!navigator.onLine) {
-                if (isManual) alert("Keine Internetverbindung verfügbar.");
-                return;
+        activeWatcherId = navigator.geolocation.watchPosition(
+          handlePositionUpdate,
+          (err) => logDiag("GPS Fehler: " + err.message),
+          { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+        );
+      } else {
+        statusElem.textContent = "Nicht unterstützt";
+        statusElem.className = "text-rose-400";
+      }
+    }
+
+    function handlePositionUpdate(pos) {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const dist = calculateDistance(lat, lng, appSettings.workLat, appSettings.workLng);
+      
+      const todayKey = getLocalDateString();
+      const radius = appSettings.radius;
+      // Hysterese: 30 Meter Puffer beim Verlassen
+      const exitThreshold = radius + 30; 
+
+      let isInside = dist <= radius;
+      if (lastGeoInside === true && dist > radius && dist <= exitThreshold) {
+        isInside = true; // Hysterese greift
+      }
+
+      document.getElementById('diagDistance').textContent = `${Math.round(dist)} m`;
+      document.getElementById('diagIsInside').textContent = isInside ? "Ja" : "Nein";
+      document.getElementById('diagLastFix').textContent = getLocalTimeString();
+
+      // Erster Fix / Erstinitialisierung
+      if (lastGeoInside === null) {
+        lastGeoInside = isInside;
+        if (isInside) {
+          const dayData = getDayData(todayKey);
+          const hasStart = dayData.events.some(e => e.type === 'start');
+          if (!hasStart) {
+            logDiag("Erstmeldung im Radius: Automatische Anmeldung (Kommt)");
+            stamp('start', todayKey);
+          }
+        }
+        return;
+      }
+
+      // Zustandswechsel: Betreten des Arbeitsbereichs
+      if (!lastGeoInside && isInside) {
+        logDiag("Arbeitsbereich betreten!");
+        const dayData = getDayData(todayKey);
+        const hasStart = dayData.events.some(e => e.type === 'start');
+        if (!hasStart) {
+          stamp('start', todayKey);
+        }
+      }
+
+      // Zustandswechsel: Verlassen des Arbeitsbereichs
+      if (lastGeoInside && !isInside) {
+        logDiag("Arbeitsbereich verlassen -> Sende Benachrichtigung");
+        triggerLeaveNotification();
+      }
+
+      lastGeoInside = isInside;
+    }
+
+    function triggerLeaveNotification() {
+      if (window.CapacitorLocalNotifications) {
+        window.CapacitorLocalNotifications.schedule({
+          notifications: [
+            {
+              title: "HoraLog - Arbeitsplatz verlassen",
+              body: "Möchtest Du eine Pause einlegen oder Feierabend machen?",
+              id: 1001,
+              actionTypeId: 'GEOFENCE_LEAVE_TYPES',
+              schedule: { at: new Date(Date.now() + 1000) }
+            }
+          ]
+        });
+      } else {
+        alert("HoraLog: Arbeitsbereich verlassen. Bitte Pause oder Feierabend stempeln.");
+      }
+    }
+
+    function setCurrentLocationAsWorkplace() {
+      if (!navigator.geolocation) {
+        alert("Geolocation wird von diesem Gerät nicht unterstützt.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          document.getElementById('geoLatInput').value = pos.coords.latitude;
+          document.getElementById('geoLngInput').value = pos.coords.longitude;
+          saveSettings();
+          alert("Standort als Arbeitsort übernommen!");
+        },
+        (err) => alert("Standort konnte nicht ermittelt werden: " + err.message)
+      );
+    }
+
+    // ==========================================
+    // 8. PDF-EXPORT & DATENSICHERUNG
+    // ==========================================
+
+    function generatePDFReport() {
+      if (typeof pdfMake === 'undefined') {
+        alert("PDF-Bibliothek lädt noch. Bitte erneut versuchen.");
+        return;
+      }
+
+      const currentYear = new Date(selectedDateKey).getFullYear();
+      const currentMonth = new Date(selectedDateKey).getMonth();
+      const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+
+      const tableBody = [
+        [{ text: 'Datum', style: 'tableHeader' }, { text: 'Kommt', style: 'tableHeader' }, { text: 'Geht', style: 'tableHeader' }, { text: 'Netto', style: 'tableHeader' }]
+      ];
+
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayData = getDayData(dStr);
+        
+        let startStr = "-";
+        let endStr = "-";
+        const firstStart = dayData.events.find(e => e.type === 'start');
+        const lastEnd = [...dayData.events].reverse().find(e => e.type === 'end');
+
+        if (firstStart) startStr = firstStart.time;
+        if (lastEnd) endStr = lastEnd.time;
+
+        const netMins = calculateNetWorkMinutes(dayData.events);
+
+        tableBody.push([dStr, startStr, endStr, formatHours(netMins / 60.0)]);
+      }
+
+      const docDefinition = {
+        content: [
+          { text: `HoraLog Monatsbericht - ${monthNames[currentMonth]} ${currentYear}`, style: 'header' },
+          { text: `Erstellt am: ${getLocalDateString()} ${getLocalTimeString()}`, style: 'subheader' },
+          {
+            table: {
+              headerRows: 1,
+              widths: ['*', '*', '*', '*'],
+              body: tableBody
+            }
+          }
+        ],
+        styles: {
+          header: { fontSize: 16, bold: true, margin: [0, 0, 0, 5] },
+          subheader: { fontSize: 10, color: 'gray', margin: [0, 0, 0, 15] },
+          tableHeader: { bold: true, fontSize: 11, fillColor: '#eeeeee' }
+        }
+      };
+
+      pdfMake.createPdf(docDefinition).download(`HoraLog_Bericht_${currentYear}_${currentMonth + 1}.pdf`);
+    }
+
+    function exportJSONBackup() {
+      const backupData = {
+        version: "9.20",
+        app: "HoraLog",
+        exportDate: new Date().toISOString(),
+        settings: appSettings,
+        storage: {}
+      };
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('horalog_day_')) {
+          backupData.storage[key] = localStorage.getItem(key);
+        }
+      }
+
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `HoraLog_Backup_${getLocalDateString()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importJSONBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (!imported.app || imported.app !== "HoraLog") {
+            alert("Ungültiges Backup-Format.");
+            return;
+          }
+
+          if (confirm("Sicherheits-Check: Möchtest Du das Backup importieren? Bestehende Daten werden überschrieben.")) {
+            // Vorher Snapshot erstellen
+            localStorage.setItem('horalog_backup_snapshot', JSON.stringify(localStorage));
+
+            if (imported.settings) {
+              localStorage.setItem('horalog_settings', JSON.stringify(imported.settings));
+            }
+            if (imported.storage) {
+              Object.keys(imported.storage).forEach(k => {
+                localStorage.setItem(k, imported.storage[k]);
+              });
             }
 
-            try {
-                const response = await fetch(UPDATE_CHECK_URL, { cache: "no-store" });
-                const data = await response.json();
-
-                if (data && data.version && data.version > CURRENT_VERSION) {
-                    const userConfirm = confirm(
-                        `🎉 Eine neue Version (v${data.version}) von HoraLog ist verfügbar!\n\n` +
-                        `Neuerungen:\n${data.notes || 'Diverse Optimierungen & Fixes'}\n\n` +
-                        `Möchtest du das Update jetzt herunterladen und installieren?`
-                    );
-
-                    if (userConfirm && data.downloadUrl) {
-                        window.open(data.downloadUrl, '_system');
-                    }
-                } else if (isManual) {
-                    alert(`✅ HoraLog ist auf dem neuesten Stand (v${CURRENT_VERSION}).`);
-                }
-            } catch (e) {
-                if (isManual) {
-                    alert("Update-Server konnte nicht erreicht werden. Stelle sicher, dass die version.json auf GitHub liegt.");
-                }
-            }
+            alert("Import erfolgreich! App wird neu geladen.");
+            location.reload();
+          }
+        } catch (err) {
+          alert("Fehler beim Einlesen der Backup-Datei: " + err.message);
         }
-
-        /* SYSTEM PERMISSIONS CHECK */
-        async function checkSystemPermissions(showModalAlways = false) {
-            let gpsOk = true;
-            let notifOk = true;
-            let batteryOk = true;
-
-            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                // Check Geolocation
-                try {
-                    const geoPerm = await window.Capacitor.Plugins.Geolocation.checkPermissions();
-                    gpsOk = (geoPerm.location === 'granted');
-                } catch(e) { gpsOk = false; }
-
-                // Check Local Notifications
-                try {
-                    const notifPerm = await window.Capacitor.Plugins.LocalNotifications.checkPermissions();
-                    notifOk = (notifPerm.display === 'granted');
-                } catch(e) { notifOk = false; }
-            }
-
-            const gpsEl = document.getElementById('perm-status-gps');
-            const notifEl = document.getElementById('perm-status-notif');
-            const batteryEl = document.getElementById('perm-status-battery');
-
-            if (gpsEl) {
-                gpsEl.innerText = gpsOk ? "OK (Aktiv)" : "Eingeschränkt";
-                gpsEl.className = "perm-status " + (gpsOk ? "status-ok" : "status-warn");
-            }
-            if (notifEl) {
-                notifEl.innerText = notifOk ? "OK (Aktiv)" : "Blockiert";
-                notifEl.className = "perm-status " + (notifOk ? "status-ok" : "status-warn");
-            }
-            if (batteryEl) {
-                batteryEl.innerText = "Bitte in Android prüfen";
-                batteryEl.className = "perm-status status-warn";
-            }
-
-            const hasIssue = !gpsOk || !notifOk;
-            document.getElementById('system-perm-banner').style.display = hasIssue ? 'block' : 'none';
-
-            if (showModalAlways || hasIssue) {
-                document.getElementById('perm-modal').classList.remove('hidden');
-            }
-        }
-
-        function closePermModal() {
-            document.getElementById('perm-modal').classList.add('hidden');
-        }
-
-        /* INTERAKTIVES ONBOARDING & TUTORIAL */
-        function checkOnboardingStatus() {
-            const tourDone = localStorage.getItem('horalog_tour_done');
-            if (!tourDone) {
-                const startTour = confirm("Willkommen bei HoraLog! 🎉\n\nMöchtest du eine kurze 1-minütige Einführung in die wichtigsten Funktionen und Vorgaben machen?");
-                if (startTour) {
-                    startInteractiveTour(false);
-                } else {
-                    localStorage.setItem('horalog_tour_done', 'true');
-                }
-            }
-        }
-
-        function startInteractiveTour(forceIncludeConfig = true) {
-            const configDone = localStorage.getItem('horalog_config_done');
-            currentTourStep = 1;
-
-            // Wenn Vorgaben noch nie eingerichtet wurden oder erzwungen wird, starte bei den Vorgaben
-            if (!configDone || forceIncludeConfig) {
-                switchTab('settings');
-                showTourStep(1);
-            } else {
-                switchTab('today');
-                showTourStep(2);
-            }
-        }
-
-        function showTourStep(step) {
-            currentTourStep = step;
-            const popover = document.getElementById('tour-popover');
-            popover.classList.remove('hidden');
-
-            if (step === 1) {
-                switchTab('settings');
-                document.getElementById('tour-title').innerText = "1. Deine Vorgaben & Standort";
-                document.getElementById('tour-body').innerText = "Trage hier deinen Namen, dein Arbeitszeitmodell sowie deine Arbeitsadresse ein. Das ist das Fundament für korrekte Auswertungen und Geofencing.";
-                document.getElementById('tour-step-num').innerText = "Schritt 1/4";
-                positionPopoverNextTo('tour-step-settings');
-            } else if (step === 2) {
-                switchTab('today');
-                document.getElementById('tour-title').innerText = "2. Täglich Stempeln";
-                document.getElementById('tour-body').innerText = "Ein Klick auf 🟢 Beginn startet deine Arbeitszeit, 🔴 Ende schließt deinen Tag ab. Pausen hältst du ganz einfach über ⏸️ Pause Fest.";
-                document.getElementById('tour-step-num').innerText = "Schritt 2/4";
-                positionPopoverNextTo('tour-step-stamp');
-            } else if (step === 3) {
-                switchTab('today');
-                document.getElementById('tour-title').innerText = "3. Tagesbilanz & Saldo";
-                document.getElementById('tour-body').innerText = "Hier siehst du sofort deine Soll- und Ist-Arbeitszeit sowie dein Tages-Saldo auf einen Blick.";
-                document.getElementById('tour-step-num').innerText = "Schritt 3/4";
-                positionPopoverNextTo('tour-step-balance');
-            } else if (step === 4) {
-                switchTab('month');
-                document.getElementById('tour-title').innerText = "4. Monatsübersicht & PDF";
-                document.getElementById('tour-body').innerText = "In der Monatsansicht findest du deine Abrechnung, Überträge aus Vormonaten und kannst deinen Monatsbericht als PDF versenden.";
-                document.getElementById('tour-step-num').innerText = "Schritt 4/4";
-                positionPopoverNextTo('tour-step-month');
-            }
-        }
-
-        function positionPopoverNextTo(elementId) {
-            const popover = document.getElementById('tour-popover');
-            popover.style.top = "20%";
-            popover.style.left = "10%";
-            popover.style.right = "10%";
-        }
-
-        function nextTourStep() {
-            if (currentTourStep < 4) {
-                showTourStep(currentTourStep + 1);
-            } else {
-                endTour();
-            }
-        }
-
-        function endTour() {
-            document.getElementById('tour-popover').classList.add('hidden');
-            localStorage.setItem('horalog_tour_done', 'true');
-            switchTab('today');
-            alert("✅ Tour beendet! Du kannst die Einführung jederzeit in den Vorgaben erneut starten.");
-        }
-
-        /* FEIERTAGE NRW */
-        function getEasterSunday(year) {
-            const a = year % 19;
-            const b = Math.floor(year / 100);
-            const c = year % 100;
-            const d = Math.floor(b / 4);
-            const e = b % 4;
-            const f = Math.floor((b + 8) / 25);
-            const g = Math.floor((b - f + 1) / 3);
-            const h = (19 * a + b - d - g + 15) % 30;
-            const i = Math.floor(c / 4);
-            const k = c % 4;
-            const l = (32 + 2 * e + 2 * i - h - k) % 7;
-            const m = Math.floor((a + 11 * h + 22 * l) / 451);
-            const month = Math.floor((h + l - 7 * m + 114) / 31);
-            const day = ((h + l - 7 * m + 114) % 31) + 1;
-            return new Date(year, month - 1, day);
-        }
-
-        function getNRWHolidays(year) {
-            const holidays = {};
-            holidays[`${year}-01-01`] = "Neujahr";
-            holidays[`${year}-05-01`] = "Tag der Arbeit";
-            holidays[`${year}-10-03`] = "Tag der Dt. Einheit";
-            holidays[`${year}-11-01`] = "Allerheiligen";
-            holidays[`${year}-12-25`] = "1. Weihnachtstag";
-            holidays[`${year}-12-26`] = "2. Weihnachtstag";
-
-            const easter = getEasterSunday(year);
-            const addDays = (baseDate, days) => {
-                const res = new Date(baseDate);
-                res.setDate(res.getDate() + days);
-                return res.toISOString().split('T')[0];
-            };
-
-            holidays[addDays(easter, -2)] = "Karfreitag";
-            holidays[addDays(easter, 1)]  = "Ostermontag";
-            holidays[addDays(easter, 39)] = "Christi Himmelfahrt";
-            holidays[addDays(easter, 50)] = "Pfingstmontag";
-            holidays[addDays(easter, 60)] = "Fronleichnam";
-
-            return holidays;
-        }
-
-        function getNRWHolidayName(dateStr) {
-            if (!dateStr || dateStr.length < 10) return null;
-            const year = parseInt(dateStr.substring(0, 4));
-            return getNRWHolidays(year)[dateStr] || null;
-        }
-
-        function isWorkDayTarget(dateStr) {
-            const dateObj = new Date(dateStr);
-            const isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
-            if (isWeekend || getNRWHolidayName(dateStr)) return 0;
-            return parseTimeToMinutes((config && config.targetHours) ? config.targetHours : "08:00");
-        }
-
-        function updateHeaderName() {
-            const firstName = document.getElementById('cfg-first-name') ? document.getElementById('cfg-first-name').value.trim() : (config?.firstName || '');
-            const lastName = document.getElementById('cfg-last-name') ? document.getElementById('cfg-last-name').value.trim() : (config?.lastName || '');
-            const fullName = [firstName, lastName].filter(Boolean).join(' ');
-            
-            const headerEl = document.getElementById('user-header-name');
-            if (headerEl) headerEl.innerText = fullName ? `Mitarbeiter: ${fullName}` : '';
-            
-            const monthNameEl = document.getElementById('month-user-name');
-            if (monthNameEl) monthNameEl.innerText = fullName ? `Mitarbeiter: ${fullName}` : '';
-        }
-
-        function loadConfig() {
-            if (config) {
-                if (document.getElementById('cfg-first-name')) document.getElementById('cfg-first-name').value = config.firstName || '';
-                if (document.getElementById('cfg-last-name')) document.getElementById('cfg-last-name').value = config.lastName || '';
-                document.getElementById('cfg-days-week').value = config.daysWeek || 5;
-                document.getElementById('cfg-target-hours').value = config.targetHours || "08:00";
-                document.getElementById('cfg-vacation-claim').value = config.vacationClaim || 30;
-                document.getElementById('cfg-vacation-prev').value = config.vacationPrev || 0;
-            }
-            updateHeaderName();
-        }
-
-        function saveConfig() {
-            config = {
-                firstName: document.getElementById('cfg-first-name').value.trim(),
-                lastName: document.getElementById('cfg-last-name').value.trim(),
-                daysWeek: parseInt(document.getElementById('cfg-days-week').value),
-                targetHours: document.getElementById('cfg-target-hours').value,
-                vacationClaim: parseInt(document.getElementById('cfg-vacation-claim').value),
-                vacationPrev: parseInt(document.getElementById('cfg-vacation-prev').value)
-            };
-            localStorage.setItem('horalog_config', JSON.stringify(config));
-            localStorage.setItem('horalog_config_done', 'true');
-            alert("✅ Vorgaben gespeichert!");
-            loadDateData();
-        }
-
-        /* GEOFENCE & ADRESSSUCHE LOGIK */
-        function loadGeoConfig() {
-            if (document.getElementById('geoMode')) document.getElementById('geoMode').value = geoConfig.mode;
-            if (document.getElementById('geoLat')) document.getElementById('geoLat').value = geoConfig.lat || '';
-            if (document.getElementById('geoLon')) document.getElementById('geoLon').value = geoConfig.lon || '';
-            if (document.getElementById('geoRadius')) document.getElementById('geoRadius').value = geoConfig.radius || 300;
-            if (document.getElementById('geoAddressInput')) document.getElementById('geoAddressInput').value = geoConfig.address || '';
-            toggleGeoModeUI();
-        }
-
-        function toggleGeoModeUI() {
-            const mode = document.getElementById('geoMode').value;
-            const details = document.getElementById('geo-settings-details');
-            if (mode === 'disabled') {
-                details.style.display = 'none';
-            } else {
-                details.style.display = 'block';
-            }
-        }
-
-        async function searchAddressApi() {
-            const address = document.getElementById('geoAddressInput').value.trim();
-            if (!address) {
-                alert("Bitte gib zuerst eine Adresse ein.");
-                return;
-            }
-
-            try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
-                const results = await response.json();
-
-                if (results && results.length > 0) {
-                    const lat = parseFloat(results[0].lat).toFixed(6);
-                    const lon = parseFloat(results[0].lon).toFixed(6);
-
-                    document.getElementById('geoLat').value = lat;
-                    document.getElementById('geoLon').value = lon;
-                    alert(`✅ Adresse gefunden!\nLatitude: ${lat}\nLongitude: ${lon}`);
-                } else {
-                    alert("Adresse konnte nicht automatisch aufgelöst werden. Du kannst auch die aktuelle GPS-Position nutzen.");
-                }
-            } catch (err) {
-                alert("Hinweis: Automatische Suche blockiert. Verwende den Button 'GPS-Pos. nutzen' auf dem Handy.");
-            }
-        }
-
-        function useCurrentPosition() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        const lat = pos.coords.latitude.toFixed(6);
-                        const lon = pos.coords.longitude.toFixed(6);
-                        document.getElementById('geoLat').value = lat;
-                        document.getElementById('geoLon').value = lon;
-                        alert(`🎯 Aktuelle GPS-Position übernommen:\nLat: ${lat}\nLon: ${lon}`);
-                    },
-                    (err) => {
-                        alert("GPS-Position konnte nicht ermittelt werden: " + err.message);
-                    },
-                    { enableHighAccuracy: true }
-                );
-            } else {
-                alert("GPS wird von diesem Gerät/Browser nicht unterstützt.");
-            }
-        }
-
-        function saveGeoConfig() {
-            const mode = document.getElementById('geoMode').value;
-            const lat = document.getElementById('geoLat').value.trim();
-            const lon = document.getElementById('geoLon').value.trim();
-            const radius = document.getElementById('geoRadius').value;
-            const address = document.getElementById('geoAddressInput').value.trim();
-
-            localStorage.setItem('horalog_geoMode', mode);
-            localStorage.setItem('horalog_geoLat', lat);
-            localStorage.setItem('horalog_geoLon', lon);
-            localStorage.setItem('horalog_geoRadius', radius);
-            localStorage.setItem('horalog_geoAddress', address);
-
-            geoConfig = { mode, lat, lon, radius, address };
-            alert("📍 Standort-Einstellungen gespeichert!");
-            setupCapacitorGeofence();
-        }
-
-        async function testPushNotification() {
-            triggerLeaveNotification();
-            alert("🔔 Test-Benachrichtigung gesendet! Wische deine Benachrichtigungszeile herunter, um die Antwort-Buttons zu testen.");
-        }
-
-        function getSelectedDateKey() {
-            return document.getElementById('selected-date').value;
-        }
-
-        function getNormalizedPauses(entry) {
-            if (!entry) return [];
-            let list = [];
-            if (entry.pauses && Array.isArray(entry.pauses)) {
-                list = [...entry.pauses];
-            } else if (entry.pauseStart || entry.pauseEnd) {
-                list.push({ start: entry.pauseStart || '', end: entry.pauseEnd || '' });
-            }
-            return list;
-        }
-
-        function calculateTotalPauseMinutes(entry) {
-            const pauses = getNormalizedPauses(entry);
-            let total = 0;
-            pauses.forEach(p => {
-                if (p.start && p.end) {
-                    let duration = parseTimeToMinutes(p.end) - parseTimeToMinutes(p.start);
-                    if (duration < 0) duration += 24 * 60;
-                    total += Math.max(0, duration);
-                }
-            });
-            return total;
-        }
-
-        function loadDateData() {
-            const key = getSelectedDateKey();
-            const entry = timeEntries[key] || {};
-
-            const holidayName = getNRWHolidayName(key);
-            const holidayBanner = document.getElementById('holiday-info-banner');
-            if (holidayName) {
-                document.getElementById('holiday-name-text').innerText = holidayName;
-                holidayBanner.style.display = 'block';
-            } else {
-                holidayBanner.style.display = 'none';
-            }
-
-            document.getElementById('time-start').innerText = entry.start || '--:--';
-            document.getElementById('time-end').innerText = entry.end || '--:--';
-            document.getElementById('edit-start').value = entry.start || '';
-            document.getElementById('edit-end').value = entry.end || '';
-
-            const pauses = getNormalizedPauses(entry);
-            renderPausesList(pauses);
-            renderManualPausesEdit(pauses);
-
-            const hasOpenPause = pauses.length > 0 && pauses[pauses.length - 1].start && !pauses[pauses.length - 1].end;
-            const toggleBtn = document.getElementById('btn-pause-toggle');
-            const toggleLbl = document.getElementById('lbl-pause-toggle');
-            const toggleSum = document.getElementById('time-pause-summary');
-
-            if (hasOpenPause) {
-                toggleBtn.style.backgroundColor = "#2980B9";
-                toggleLbl.innerText = "▶️ Pause Beenden";
-                toggleSum.innerText = "Aktiv seit " + pauses[pauses.length - 1].start;
-            } else {
-                toggleBtn.style.backgroundColor = "#E67E22";
-                toggleLbl.innerText = "⏸️ Pause Starten";
-                const totalP = calculateTotalPauseMinutes(entry);
-                toggleSum.innerText = totalP > 0 ? `Gesamt: ${totalP} Min.` : "Keine aktive Pause";
-            }
-
-            const activeCode = entry.code || '';
-            document.getElementById('code-btn-norm').classList.toggle('active', activeCode === '');
-            document.getElementById('code-btn-k').classList.toggle('active', activeCode === 'K');
-            document.getElementById('code-btn-u').classList.toggle('active', activeCode === 'U');
-            document.getElementById('code-btn-fx').classList.toggle('active', activeCode === 'FX');
-
-            let targetMinutes = isWorkDayTarget(key);
-            document.getElementById('day-target').innerText = formatMinutesToHHMM(targetMinutes) + " Std.";
-
-            let actualMinutes = calculateNetMinutes(entry, key);
-            document.getElementById('day-actual').innerText = formatMinutesToHHMM(actualMinutes) + " Std.";
-
-            let balanceMinutes = actualMinutes - targetMinutes;
-            let balanceHoursStr = (balanceMinutes >= 0 ? "+" : "") + (balanceMinutes / 60).toFixed(1);
-            document.getElementById('day-balance').innerText = balanceHoursStr + " Std.";
-        }
-
-        function renderPausesList(pauses) {
-            const container = document.getElementById('pauses-list');
-            const totalDisplay = document.getElementById('total-pause-display');
-            if (!container) return;
-
-            let totalMin = 0;
-            if (!pauses || pauses.length === 0) {
-                container.innerHTML = "<i>Keine Pausen erfasst</i>";
-                totalDisplay.innerText = "0 Min.";
-                return;
-            }
-
-            let htmlStr = '<div style="display: flex; flex-direction: column; gap: 4px;">';
-            pauses.forEach((p, idx) => {
-                let duration = 0;
-                let statusText = "";
-                if (p.start && p.end) {
-                    duration = parseTimeToMinutes(p.end) - parseTimeToMinutes(p.start);
-                    if (duration < 0) duration += 24 * 60;
-                    totalMin += Math.max(0, duration);
-                    statusText = `${p.start} - ${p.end} (${duration} Min.)`;
-                } else if (p.start) {
-                    statusText = `${p.start} - läuft...`;
-                }
-                htmlStr += `<div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 4px 8px; border-radius: 4px; border: 1px solid #E2E8F0;">
-                    <span>Pause ${idx + 1}: <strong>${statusText}</strong></span>
-                    <button type="button" onclick="deletePause(${idx})" style="background: none; border: none; color: #C0392B; font-weight: bold; cursor: pointer; padding: 2px 6px;">✕</button>
-                </div>`;
-            });
-            htmlStr += '</div>';
-
-            container.innerHTML = htmlStr;
-            totalDisplay.innerText = totalMin + " Min.";
-        }
-
-        function togglePauseStamp() {
-            const key = getSelectedDateKey();
-            if (!timeEntries[key]) timeEntries[key] = {};
-            let pauses = getNormalizedPauses(timeEntries[key]);
-            const timeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-
-            const hasOpenPause = pauses.length > 0 && pauses[pauses.length - 1].start && !pauses[pauses.length - 1].end;
-
-            if (hasOpenPause) {
-                pauses[pauses.length - 1].end = timeStr;
-            } else {
-                pauses.push({ start: timeStr, end: '' });
-            }
-
-            timeEntries[key].pauses = pauses;
-            delete timeEntries[key].pauseStart;
-            delete timeEntries[key].pauseEnd;
-
-            localStorage.setItem('horalog_entries', JSON.stringify(timeEntries));
-            loadDateData();
-        }
-
-        function deletePause(index) {
-            const key = getSelectedDateKey();
-            if (!timeEntries[key]) return;
-            let pauses = getNormalizedPauses(timeEntries[key]);
-            pauses.splice(index, 1);
-            timeEntries[key].pauses = pauses;
-            delete timeEntries[key].pauseStart;
-            delete timeEntries[key].pauseEnd;
-
-            localStorage.setItem('horalog_entries', JSON.stringify(timeEntries));
-            loadDateData();
-        }
-
-        function renderManualPausesEdit(pauses) {
-            const container = document.getElementById('manual-pauses-edit-container');
-            if (!container) return;
-            container.innerHTML = '';
-
-            pauses.forEach((p, idx) => {
-                const row = document.createElement('div');
-                row.className = 'manual-pause-row';
-                row.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 8px;';
-                row.innerHTML = `
-                    <div style="flex:1;"><label style="font-size:11px;">Start</label><input type="time" class="form-control manual-p-start" value="${p.start || ''}"></div>
-                    <div style="flex:1;"><label style="font-size:11px;">Ende</label><input type="time" class="form-control manual-p-end" value="${p.end || ''}"></div>
-                    <button type="button" onclick="this.parentElement.remove()" style="background: #E74C3C; color: white; border: none; border-radius: 4px; padding: 6px 10px; margin-top: 14px; cursor: pointer;">✕</button>
-                `;
-                container.appendChild(row);
-            });
-        }
-
-        function addPauseInput() {
-            const container = document.getElementById('manual-pauses-edit-container');
-            if (!container) return;
-            const row = document.createElement('div');
-            row.className = 'manual-pause-row';
-            row.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 8px;';
-            row.innerHTML = `
-                <div style="flex:1;"><label style="font-size:11px;">Start</label><input type="time" class="form-control manual-p-start" value=""></div>
-                <div style="flex:1;"><label style="font-size:11px;">Ende</label><input type="time" class="form-control manual-p-end" value=""></div>
-                <button type="button" onclick="this.parentElement.remove()" style="background: #E74C3C; color: white; border: none; border-radius: 4px; padding: 6px 10px; margin-top: 14px; cursor: pointer;">✕</button>
-            `;
-            container.appendChild(row);
-        }
-
-        function setCode(code) {
-            const key = getSelectedDateKey();
-            if (!timeEntries[key]) timeEntries[key] = {};
-            timeEntries[key].code = code;
-            localStorage.setItem('horalog_entries', JSON.stringify(timeEntries));
-            loadDateData();
-        }
-
-        function stamp(type) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const key = getSelectedDateKey() || todayStr;
-            if (!timeEntries[key]) timeEntries[key] = {};
-            const timeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-
-            if (type === 'start') timeEntries[key].start = timeStr;
-            if (type === 'pauseStart') {
-                let pauses = getNormalizedPauses(timeEntries[key]);
-                const hasOpen = pauses.length > 0 && pauses[pauses.length - 1].start && !pauses[pauses.length - 1].end;
-                if (!hasOpen) {
-                    pauses.push({ start: timeStr, end: '' });
-                    timeEntries[key].pauses = pauses;
-                }
-            }
-            if (type === 'pauseEnd') {
-                let pauses = getNormalizedPauses(timeEntries[key]);
-                const hasOpen = pauses.length > 0 && pauses[pauses.length - 1].start && !pauses[pauses.length - 1].end;
-                if (hasOpen) {
-                    pauses[pauses.length - 1].end = timeStr;
-                    timeEntries[key].pauses = pauses;
-                }
-            }
-            if (type === 'end') timeEntries[key].end = timeStr;
-
-            localStorage.setItem('horalog_entries', JSON.stringify(timeEntries));
-            loadDateData();
-        }
-
-        function toggleManualEdit() {
-            document.getElementById('manual-edit-card').classList.toggle('hidden');
-        }
-
-        function toggleReasonCustom() {
-            const selectVal = document.getElementById('edit-reason-select').value;
-            const customGroup = document.getElementById('edit-reason-custom-group');
-            if (selectVal === 'Sonstiges') {
-                customGroup.classList.remove('hidden');
-            } else {
-                customGroup.classList.add('hidden');
-            }
-        }
-
-        function saveManualEdit() {
-            const key = getSelectedDateKey();
-            if (!timeEntries[key]) timeEntries[key] = {};
-
-            const reasonSelect = document.getElementById('edit-reason-select').value;
-            const reasonCustom = document.getElementById('edit-reason-custom').value.trim();
-
-            if (!reasonSelect) {
-                alert("⚠️ Bitte wähle zwingend einen Grund für die manuelle Zeitenkorrektur aus.");
-                return;
-            }
-
-            if (reasonSelect === 'Sonstiges' && !reasonCustom) {
-                alert("⚠️ Bitte trage bei 'Sonstiges' eine kurze Erläuterung ein.");
-                return;
-            }
-
-            const finalReason = (reasonSelect === 'Sonstiges') ? `Sonstiges: ${reasonCustom}` : reasonSelect;
-
-            timeEntries[key].start = document.getElementById('edit-start').value;
-            timeEntries[key].end = document.getElementById('edit-end').value;
-            timeEntries[key].editReason = finalReason;
-
-            let pauses = [];
-            document.querySelectorAll('#manual-pauses-edit-container .manual-pause-row').forEach(row => {
-                let s = row.querySelector('.manual-p-start').value;
-                let e = row.querySelector('.manual-p-end').value;
-                if (s || e) {
-                    pauses.push({ start: s, end: e });
-                }
-            });
-            timeEntries[key].pauses = pauses;
-            delete timeEntries[key].pauseStart;
-            delete timeEntries[key].pauseEnd;
-
-            localStorage.setItem('horalog_entries', JSON.stringify(timeEntries));
-            loadDateData();
-            document.getElementById('manual-edit-card').classList.add('hidden');
-            alert("✅ Korrektur mit Grund ('" + finalReason + "') für " + key + " gespeichert!");
-        }
-
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-
-            if (tab === 'today') {
-                document.getElementById('tab-today').classList.remove('hidden');
-                document.getElementById('nav-today').classList.add('active');
-            } else if (tab === 'month') {
-                document.getElementById('tab-month').classList.remove('hidden');
-                document.getElementById('nav-month').classList.add('active');
-                renderMonthTable();
-            } else if (tab === 'settings') {
-                document.getElementById('tab-settings').classList.remove('hidden');
-                document.getElementById('nav-settings').classList.add('active');
-            }
-        }
-
-        function calculateMonthTotals(year, month) {
-            const daysInMonth = new Date(year, month, 0).getDate();
-            let totalActualMin = 0;
-            let totalTargetMin = 0;
-
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const entry = timeEntries[dateStr] || {};
-
-                let actualMin = calculateNetMinutes(entry, dateStr);
-                totalActualMin += actualMin;
-
-                let targetMin = isWorkDayTarget(dateStr);
-                totalTargetMin += targetMin;
-            }
-            return { actualMin: totalActualMin, targetMin: totalTargetMin, balanceMin: totalActualMin - totalTargetMin };
-        }
-
-        function calculatePriorMonthsCarryover(currentYear, currentMonth) {
-            let carryoverMin = 0;
-            const keys = Object.keys(timeEntries).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
-            if (keys.length === 0) return 0;
-
-            const earliestYear = parseInt(keys[0].substring(0, 4));
-            
-            for (let y = earliestYear; y <= currentYear; y++) {
-                let startM = (y === earliestYear) ? parseInt(keys[0].substring(5, 7)) : 1;
-                let endM = (y === currentYear) ? currentMonth - 1 : 12;
-
-                for (let m = startM; m <= endM; m++) {
-                    const res = calculateMonthTotals(y, m);
-                    carryoverMin += res.balanceMin;
-                }
-            }
-            return carryoverMin;
-        }
-
-        function renderMonthTable() {
-            const monthVal = document.getElementById('month-picker').value;
-            if (!monthVal) return;
-
-            const tbody = document.getElementById('month-table-body');
-            tbody.innerHTML = '';
-
-            const [year, month] = monthVal.split('-').map(Number);
-            const daysInMonth = new Date(year, month, 0).getDate();
-
-            let totalActualMin = 0;
-            let totalTargetMin = 0;
-
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const entry = timeEntries[dateStr] || {};
-                const dateObj = new Date(year, month - 1, day);
-                const isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
-                const holidayName = getNRWHolidayName(dateStr);
-
-                let actualMin = calculateNetMinutes(entry, dateStr);
-                totalActualMin += actualMin;
-
-                let targetMin = isWorkDayTarget(dateStr);
-                totalTargetMin += targetMin;
-
-                const tr = document.createElement('tr');
-                if (holidayName) {
-                    tr.className = 'holiday-row';
-                } else if (isWeekend) {
-                    tr.style.background = '#F2F4F4';
-                }
-
-                let codeDisplay = entry.code || '-';
-                if (holidayName) {
-                    codeDisplay = `<span class="holiday-tag" title="${holidayName}">FT</span>`;
-                }
-
-                let noteText = entry.editReason ? ` 📝 (${entry.editReason})` : '';
-
-                tr.innerHTML = `
-                    <td>${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}</td>
-                    <td>${entry.start || '-'}</td>
-                    <td>${calculateTotalPauseMinutes(entry) > 0 ? calculateTotalPauseMinutes(entry) + 'm' : '-'}</td>
-                    <td>${entry.end || '-'}</td>
-                    <td><strong>${codeDisplay}</strong></td>
-                    <td>${formatMinutesToHHMM(actualMin)}${noteText}</td>
-                `;
-                tbody.appendChild(tr);
-            }
-
-            const carryoverMin = calculatePriorMonthsCarryover(year, month);
-            const carryoverHoursStr = (carryoverMin >= 0 ? "+" : "") + (carryoverMin / 60).toFixed(1);
-
-            document.getElementById('month-prev-carryover').innerText = carryoverHoursStr + " Std.";
-            document.getElementById('month-sum-actual').innerText = formatMinutesToHHMM(totalActualMin) + " Std.";
-            document.getElementById('month-sum-target').innerText = formatMinutesToHHMM(totalTargetMin) + " Std.";
-            let balanceMin = totalActualMin - totalTargetMin;
-            document.getElementById('month-sum-balance').innerText = (balanceMin >= 0 ? "+" : "") + (balanceMin / 60).toFixed(1) + " Std.";
-
-            let totalAccumulatedMin = carryoverMin + balanceMin;
-            document.getElementById('month-total-accumulated').innerText = (totalAccumulatedMin >= 0 ? "+" : "") + (totalAccumulatedMin / 60).toFixed(1) + " Std.";
-        }
-
-        function exportPDF() {
-            const monthVal = document.getElementById('month-picker').value;
-            const firstName = config?.firstName || '';
-            const lastName = config?.lastName || '';
-            const fullName = [firstName, lastName].filter(Boolean).join(' ');
-            const nameSuffix = fullName ? ` - ${fullName}` : '';
-            
-            const subject = encodeURIComponent(`HoraLog Monatsnachweis ${monthVal}${nameSuffix}`);
-            const body = encodeURIComponent(`Hallo,\n\nanbei die Arbeitszeiterfassung für den Monat ${monthVal}` + (fullName ? ` von ${fullName}` : '') + `.\n\nMit freundlichen Grüßen`);
-            
-            alert("📧 Monatsbericht für " + monthVal + (fullName ? " (" + fullName + ")" : "") + " wird an dein E-Mail-Programm übergeben.");
-            window.location.href = `mailto:?subject=${subject}&body=${body}`;
-        }
-
-        function parseTimeToMinutes(timeStr) {
-            if (!timeStr || !timeStr.includes(':')) return 0;
-            const [h, m] = timeStr.split(':').map(Number);
-            return h * 60 + m;
-        }
-
-        function formatMinutesToHHMM(minutes) {
-            if (minutes <= 0) return "00:00";
-            let h = Math.floor(minutes / 60);
-            let m = minutes % 60;
-            return String(h).padStart(2, '0') + ":" + String(m).padStart(2, '0');
-        }
-
-        function calculateNetMinutes(entry, dateStr) {
-            if (!entry) return 0;
-            const targetDailyMin = isWorkDayTarget(dateStr);
-            
-            if (entry.code === 'U' || entry.code === 'K') return targetDailyMin;
-            if (entry.code === 'FX') return 0;
-            
-            if (!entry.start || !entry.end) return 0;
-            let startMin = parseTimeToMinutes(entry.start);
-            let endMin = parseTimeToMinutes(entry.end);
-            let grossMin = endMin - startMin;
-            if (grossMin < 0) grossMin += 24 * 60;
-
-            let pauseMin = calculateTotalPauseMinutes(entry);
-            return Math.max(0, grossMin - pauseMin);
-        }
-
-        /* EXPORT / IMPORT LOGIK */
-        function exportHoraLogData() {
-            try {
-                const backupData = {};
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    backupData[key] = localStorage.getItem(key);
-                }
-
-                const jsonString = JSON.stringify(backupData, null, 2);
-                const blob = new Blob([jsonString], { type: "application/json;charset=utf-8" });
-                const downloadUrl = URL.createObjectURL(blob);
-                const downloadAnchor = document.createElement('a');
-                
-                const dateStr = new Date().toISOString().slice(0, 10);
-                downloadAnchor.href = downloadUrl;
-                downloadAnchor.download = `horalog_backup_${dateStr}.json`;
-
-                document.body.appendChild(downloadAnchor);
-                downloadAnchor.click();
-
-                setTimeout(() => {
-                    document.body.removeChild(downloadAnchor);
-                    URL.revokeObjectURL(downloadUrl);
-                }, 100);
-
-            } catch (error) {
-                alert("Fehler beim Exportieren: " + error.message);
-            }
-        }
-
-        function importHoraLogData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const importedData = JSON.parse(e.target.result);
-                    if (typeof importedData === 'object' && importedData !== null) {
-                        Object.keys(importedData).forEach(key => {
-                            localStorage.setItem(key, importedData[key]);
-                        });
-
-                        alert("✅ Daten erfolgreich importiert! Die App wird neu geladen.");
-                        location.reload();
-                    } else {
-                        alert("Ungültiges Dateiformat.");
-                    }
-                } catch (err) {
-                    alert("Fehler beim Importieren der Datei: " + err.message);
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        /* LOCAL NOTIFICATIONS ACTIONS LOGIC */
-        async function registerLocalNotificationActionListeners() {
-            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                const LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
-                if (LocalNotifications) {
-                    try {
-                        await LocalNotifications.registerActionTypes({
-                            types: [
-                                {
-                                    id: 'GEOFENCE_LEAVE_TYPES',
-                                    actions: [
-                                        { id: 'ACT_PAUSE_START', title: '⏸️ Pause starten' },
-                                        { id: 'ACT_WORK_END', title: '🔴 Feierabend' }
-                                    ]
-                                },
-                                {
-                                    id: 'GEOFENCE_ENTER_TYPES',
-                                    actions: [
-                                        { id: 'ACT_PAUSE_END', title: '▶️ Pause beenden' },
-                                        { id: 'ACT_IGNORE', title: '⏳ Pause fortführen' }
-                                    ]
-                                }
-                            ]
-                        });
-
-                        LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
-                            const actionId = notification.actionId;
-                            if (actionId === 'ACT_PAUSE_START') stamp('pauseStart');
-                            if (actionId === 'ACT_WORK_END') stamp('end');
-                            if (actionId === 'ACT_PAUSE_END') stamp('pauseEnd');
-                        });
-                    } catch (e) {
-                        console.log("LocalNotifications Registration Error:", e);
-                    }
-                }
-            }
-        }
-
-        async function triggerLeaveNotification() {
-            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                const LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
-                if (LocalNotifications) {
-                    await LocalNotifications.schedule({
-                        notifications: [
-                            {
-                                title: "Arbeitsort verlassen 📍",
-                                body: "Möchtest du eine Pause einlegen oder hast du Feierabend?",
-                                id: 1001,
-                                actionTypeId: 'GEOFENCE_LEAVE_TYPES',
-                                schedule: { at: new Date(Date.now() + 1000) }
-                            }
-                        ]
-                    });
-                }
-            } else {
-                alert("📍 [Simulierter Geofence Leave] Möchtest du eine Pause einlegen oder hast du Feierabend?");
-            }
-        }
-
-        async function triggerEnterNotification() {
-            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                const LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
-                if (LocalNotifications) {
-                    await LocalNotifications.schedule({
-                        notifications: [
-                            {
-                                title: "Wieder am Arbeitsort 📍",
-                                body: "Deine Pause läuft noch. Möchtest du die Pause beenden?",
-                                id: 1002,
-                                actionTypeId: 'GEOFENCE_ENTER_TYPES',
-                                schedule: { at: new Date(Date.now() + 1000) }
-                            }
-                        ]
-                    });
-                }
-            }
-        }
-
-        /* CAPACITOR BACKGROUND GEOLOCATION INTEGRATION */
-        function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
-            const R = 6371e3;
-            const radLat1 = lat1 * Math.PI / 180;
-            const radLat2 = lat2 * Math.PI / 180;
-            const deltaLat = (lat2 - lat1) * Math.PI / 180;
-            const deltaLon = (lon2 - lon1) * Math.PI / 180;
-
-            const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-                      Math.cos(radLat1) * Math.cos(radLat2) *
-                      Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-            return R * c;
-        }
-
-        async function setupCapacitorGeofence() {
-            if (geoConfig.mode === 'disabled') return;
-
-            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                const BackgroundGeolocation = window.Capacitor.Plugins.BackgroundGeolocation;
-                if (BackgroundGeolocation) {
-                    try {
-                        await BackgroundGeolocation.addWatcher(
-                            {
-                                backgroundMessage: "HoraLog überwacht den Arbeitsplatz-Radius.",
-                                backgroundTitle: "Arbeitszeiterfassung aktiv",
-                                requestPermissions: true,
-                                stale: false,
-                                distanceFilter: 30
-                            },
-                            (location, error) => {
-                                if (error || !location) return;
-
-                                const todayKey = new Date().toISOString().split('T')[0];
-                                const dateObj = new Date(todayKey);
-                                const isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
-                                const holidayName = getNRWHolidayName(todayKey);
-                                const entry = timeEntries[todayKey] || {};
-
-                                const isOffDay = isWeekend || holidayName || entry.code === 'U' || entry.code === 'K' || entry.code === 'FX';
-                                if (isOffDay) return;
-
-                                if (geoConfig.lat && geoConfig.lon) {
-                                    const dist = calculateDistanceMeters(
-                                        location.latitude, location.longitude,
-                                        parseFloat(geoConfig.lat), parseFloat(geoConfig.lon)
-                                    );
-                                    const isInside = dist <= (parseInt(geoConfig.radius, 10) || 300);
-
-                                    const debugEl = document.getElementById('geo-debug-status');
-                                    if (debugEl) debugEl.innerText = `Status: ${isInside ? 'Innerhalb' : 'Außerhalb'} (~${Math.round(dist)}m) - ${new Date().toLocaleTimeString('de-DE')}`;
-                                    
-                                    if (lastGeoInside !== null && lastGeoInside !== isInside) {
-                                        const pauses = getNormalizedPauses(entry);
-                                        const hasOpenPause = pauses.length > 0 && pauses[pauses.length - 1].start && !pauses[pauses.length - 1].end;
-
-                                        if (isInside) {
-                                            if (!entry.start) {
-                                                stamp('start');
-                                            } else if (hasOpenPause) {
-                                                triggerEnterNotification();
-                                            }
-                                        } else {
-                                            if (entry.start && !entry.end && !hasOpenPause) {
-                                                triggerLeaveNotification();
-                                            }
-                                        }
-                                    }
-                                    lastGeoInside = isInside;
-                                }
-                            }
-                        );
-                    } catch (e) {
-                        console.log("Geofence Fehler:", e);
-                    }
-                }
-            }
-        }
-
-        window.onload = function() { initApp(); };
-    </script>
+      };
+      reader.readAsText(file);
+    }
+
+    // ==========================================
+    // 9. SERVICE WORKER / PWA REGISTRIERUNG
+    // ==========================================
+
+    function registerPWA() {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => logDiag("ServiceWorker registriert."))
+          .catch(err => logDiag("ServiceWorker Fehler: " + err.message));
+      }
+    }
+  </script>
 </body>
 </html>
